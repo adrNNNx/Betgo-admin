@@ -1,0 +1,30 @@
+import type { Metadata } from "next"
+
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { LoginForm } from "./login-form"
+
+export const metadata: Metadata = {
+  title: "Ingresar · Betgo Admin",
+}
+
+export default function LoginPage() {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
+      <Card className="w-full max-w-sm">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl">Betgo Admin</CardTitle>
+          <CardDescription>Panel de administración</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <LoginForm />
+        </CardContent>
+      </Card>
+    </main>
+  )
+}
