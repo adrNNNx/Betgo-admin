@@ -9,6 +9,8 @@ import {
   type LucideIcon,
 } from "lucide-react"
 
+import { canAccess, type Role } from "@/lib/auth"
+
 /**
  * Fuente única de verdad de la navegación del panel.
  * Para agregar un módulo nuevo, sumá un objeto acá: el sidebar,
@@ -19,7 +21,7 @@ export type NavItem = {
   url: string
   icon: LucideIcon
   /** Roles que pueden ver el ítem. Vacío/undefined = todos. */
-  roles?: string[]
+  roles?: Role[]
 }
 
 export type NavGroup = {
@@ -44,3 +46,10 @@ export const navigation: NavGroup[] = [
 
 /** Todos los ítems aplanados (útil para resolver breadcrumbs por pathname). */
 export const allNavItems: NavItem[] = navigation.flatMap((g) => g.items)
+
+/** Navegación recortada al rol: oculta ítems no permitidos y grupos vacíos. */
+export function filterNavByRole(groups: NavGroup[], role: Role): NavGroup[] {
+  return groups
+    .map((g) => ({ ...g, items: g.items.filter((i) => canAccess(role, i.roles)) }))
+    .filter((g) => g.items.length > 0)
+}

@@ -1,31 +1,31 @@
+import { redirect } from "next/navigation"
+
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import { SiteHeader } from "@/components/layout/site-header"
-import type { SessionUser } from "@/components/layout/nav-user"
+import { SessionProvider } from "@/components/session-provider"
+import { getSessionUser } from "@/lib/session"
 
-// ponytail: shell autenticado. Todas las rutas dentro de (admin) comparten
-// sidebar + header. El estado abierto/cerrado del sidebar lo persiste shadcn
-// en la cookie `sidebar_state` (lo lee SidebarProvider del lado del server).
-//
-// TODO: reemplazar este usuario fijo por la sesión real. Cuando el backend
-// exponga /me, leelo acá (server component) y pasalo a AppSidebar.
-const currentUser: SessionUser = {
-  name: "Francis Perier",
-  role: "Administrador",
-}
-
-export default function AdminLayout({
+// Shell autenticado. El estado abierto/cerrado del sidebar lo persiste shadcn en
+// la cookie `sidebar_state`. El usuario se resuelve server-side y baja por props
+// (sidebar) y por contexto (componentes cliente que gatean por rol).
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const user = await getSessionUser()
+  if (!user) redirect("/login")
+
   return (
-    <SidebarProvider>
-      <AppSidebar user={currentUser} />
-      <SidebarInset>
-        <SiteHeader />
-        <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">{children}</div>
-      </SidebarInset>
-    </SidebarProvider>
+    <SessionProvider user={user}>
+      <SidebarProvider>
+        <AppSidebar user={user} />
+        <SidebarInset>
+          <SiteHeader />
+          <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">{children}</div>
+        </SidebarInset>
+      </SidebarProvider>
+    </SessionProvider>
   )
 }

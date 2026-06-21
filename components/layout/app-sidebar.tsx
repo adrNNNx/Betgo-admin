@@ -2,7 +2,8 @@
 
 import Link from "next/link"
 
-import { navigation } from "@/config/nav"
+import { navigation, filterNavByRole } from "@/config/nav"
+import type { SessionUser } from "@/lib/auth"
 import {
   Sidebar,
   SidebarContent,
@@ -14,9 +15,13 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { NavMain } from "@/components/layout/nav-main"
-import { NavUser, type SessionUser } from "@/components/layout/nav-user"
+import { NavUser } from "@/components/layout/nav-user"
 
 export function AppSidebar({ user }: { user: SessionUser }) {
+  // El filtrado vive acá (client): la nav lleva componentes de icono que no son
+  // serializables, así que no pueden cruzar la frontera server→client por props.
+  const groups = filterNavByRole(navigation, user.role)
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -37,7 +42,7 @@ export function AppSidebar({ user }: { user: SessionUser }) {
       </SidebarHeader>
 
       <SidebarContent>
-        <NavMain groups={navigation} />
+        <NavMain groups={groups} />
       </SidebarContent>
 
       <SidebarFooter>

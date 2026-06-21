@@ -1,12 +1,17 @@
+import "server-only"
 import { cookies } from "next/headers"
+import { cache } from "react"
 
-// ponytail: tokens live in httpOnly cookies (XSS-safe). Server actions talk to
-// the backend server-to-server, so the browser never sees a token and CORS
-// never applies. Cookie name kept in sync with middleware.ts by hand.
-export const ACCESS_COOKIE = "bg_access"
-export const REFRESH_COOKIE = "bg_refresh"
+import {
+  ACCESS_COOKIE,
+  REFRESH_COOKIE,
+  REFRESH_MAX_AGE,
+  type SessionUser,
+} from "@/lib/auth"
 
-const REFRESH_MAX_AGE = 60 * 60 * 24 * 7 // 7d, matches backend JWT_REFRESH_EXPIRES_IN
+// ponytail: tokens en cookies httpOnly (XSS-safe). Server-to-server, sin CORS.
+// El refresh-on-expiry lo hace proxy.ts antes de cada request protegido, así que
+// acá sólo leemos un access token ya vigente.
 
 export async function setTokens(
   accessToken: string,
@@ -33,3 +38,35 @@ export async function getAccessToken() {
 export async function getRefreshToken() {
   return (await cookies()).get(REFRESH_COOKIE)?.value ?? null
 }
+
+/**
+ * Usuario logueado, leído del backend. `cache()` lo deduplica dentro de un mismo
+ * render (layout + header + breadcrumbs comparten una sola llamada).
+ *
+ * ponytail: ceiling — si el backend revoca la sesión mientras el access token
+ * sigue vigente (<15m), esto devuelve null y el layout manda a /login. Aceptable;
+ * el refresh-on-401 a nivel de cada endpoint se agrega cuando los módulos
+ * empiecen a consumir datos.
+ */
+export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
+  const token = await getAccessToken()
+  if (!token) return null
+
+  try {
+    const res = await fetch(`${process.env.BACKEND_URL}/auth/profile`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    })
+    if (!res.ok) return null
+    const u = await res.json()
+    return {
+      id: u.id,
+      name: u.name ?? null,
+      phone: u.phone,
+      email: u.email ?? null,
+      role: u.role,
+    }
+  } catch {
+    return null
+  }
+})

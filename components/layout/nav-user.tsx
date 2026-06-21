@@ -3,6 +3,7 @@
 import { ChevronsUpDown, LogOut, UserRound } from "lucide-react"
 
 import { logout } from "@/app/login/actions"
+import { ROLE_LABELS, type SessionUser } from "@/lib/auth"
 import {
   Avatar,
   AvatarFallback,
@@ -22,11 +23,6 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 
-export type SessionUser = {
-  name: string
-  role: string
-}
-
 function initials(name: string) {
   return name
     .split(" ")
@@ -38,6 +34,8 @@ function initials(name: string) {
 
 export function NavUser({ user }: { user: SessionUser }) {
   const { isMobile } = useSidebar()
+  const displayName = user.name ?? user.phone
+  const roleLabel = ROLE_LABELS[user.role] ?? user.role
 
   return (
     <SidebarMenu>
@@ -50,13 +48,13 @@ export function NavUser({ user }: { user: SessionUser }) {
             >
               <Avatar className="size-8 rounded-md">
                 <AvatarFallback className="rounded-md bg-primary text-primary-foreground text-xs">
-                  {initials(user.name)}
+                  {initials(displayName)}
                 </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{user.name}</span>
+                <span className="truncate font-medium">{displayName}</span>
                 <span className="truncate text-xs text-muted-foreground">
-                  {user.role}
+                  {roleLabel}
                 </span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
@@ -70,9 +68,9 @@ export function NavUser({ user }: { user: SessionUser }) {
           >
             <DropdownMenuLabel className="font-normal">
               <div className="grid gap-0.5">
-                <span className="truncate font-medium">{user.name}</span>
+                <span className="truncate font-medium">{displayName}</span>
                 <span className="truncate text-xs text-muted-foreground">
-                  {user.role}
+                  {roleLabel}
                 </span>
               </div>
             </DropdownMenuLabel>
