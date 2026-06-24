@@ -40,6 +40,27 @@ export async function getRefreshToken() {
 }
 
 /**
+ * fetch al backend con el access token de la sesión adjunto. Para usar en server
+ * components y server actions. El refresh-on-expiry lo hace proxy.ts antes del
+ * request, así que acá el token ya está vigente.
+ *
+ * ponytail: ceiling — no reintenta el refresh si el backend devuelve 401 a mitad
+ * de la vida del token (revocación). Si eso pesa, agregá un retry con
+ * /auth/refresh acá. Para el CRUD de admin alcanza con lo del proxy.
+ */
+export async function apiFetch(path: string, init?: RequestInit) {
+  const token = await getAccessToken()
+  return fetch(`${process.env.BACKEND_URL}${path}`, {
+    ...init,
+    cache: "no-store",
+    headers: {
+      ...init?.headers,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  })
+}
+
+/**
  * Usuario logueado, leído del backend. `cache()` lo deduplica dentro de un mismo
  * render (layout + header + breadcrumbs comparten una sola llamada).
  *

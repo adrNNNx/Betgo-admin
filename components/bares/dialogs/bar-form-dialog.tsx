@@ -6,6 +6,7 @@ import type { Bar } from "@/lib/bares/types"
 import { slugify } from "@/lib/format"
 import { DISTRIBUTION_COLORS } from "@/config/bares"
 import { saveBar } from "@/lib/bares/actions"
+import { withToast } from "@/lib/run-action"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -54,8 +55,11 @@ export function BarFormDialog({
 
   const submit = () => {
     startTransition(async () => {
-      await saveBar({ id: bar?.id, name, location, distribution: dist })
-      onClose()
+      const ok = await withToast(
+        () => saveBar({ id: bar?.id, name, location, distribution: dist }),
+        isEdit ? "Bar actualizado" : "Bar creado"
+      )
+      if (ok) onClose()
     })
   }
 

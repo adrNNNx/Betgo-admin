@@ -8,7 +8,6 @@ import {
   Pencil,
   Dices,
   Power,
-  Trash2,
 } from "lucide-react"
 
 import type { Bar } from "@/lib/bares/types"
@@ -63,19 +62,22 @@ export function BarRowActions({
           <Dices />
           Símbolos de la máquina
         </DropdownMenuItem>
-        <DropdownMenuItem>
-          <Power />
-          {bar.status === "active" ? "Pausar bar" : "Activar bar"}
-        </DropdownMenuItem>
 
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          variant="destructive"
-          onClick={() => onAction("delete", bar)}
-        >
-          <Trash2 />
-          Eliminar
-        </DropdownMenuItem>
+        {bar.status === "active" ? (
+          <DropdownMenuItem
+            variant="destructive"
+            onClick={() => onAction("deactivate", bar)}
+          >
+            <Power />
+            Desactivar bar
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem onClick={() => onAction("activate", bar)}>
+            <Power />
+            Activar bar
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )

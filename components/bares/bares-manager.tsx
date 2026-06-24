@@ -1,10 +1,12 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useTransition } from "react"
 import { Plus, Search } from "lucide-react"
 
 import type { Bar, BarStatus } from "@/lib/bares/types"
 import { STATUS_FILTERS } from "@/config/bares"
+import { setBarActive } from "@/lib/bares/actions"
+import { withToast } from "@/lib/run-action"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -23,7 +25,7 @@ import { BarFormDialog } from "@/components/bares/dialogs/bar-form-dialog"
 import { RechargeDialog } from "@/components/bares/dialogs/recharge-dialog"
 import { FreePlaysDialog } from "@/components/bares/dialogs/free-plays-dialog"
 import { BarImageDialog } from "@/components/bares/dialogs/bar-image-dialog"
-import { DeleteBarDialog } from "@/components/bares/dialogs/delete-bar-dialog"
+import { DeactivateBarDialog } from "@/components/bares/dialogs/deactivate-bar-dialog"
 
 export type BarDialogKind =
   | "create"
@@ -31,7 +33,8 @@ export type BarDialogKind =
   | "recharge"
   | "freeplays"
   | "image"
-  | "delete"
+  | "deactivate"
+  | "activate"
   | "symbols"
 
 type DialogState = { kind: BarDialogKind | null; bar: Bar | null }
@@ -40,10 +43,17 @@ type DialogState = { kind: BarDialogKind | null; bar: Bar | null }
  * Orquesta la lista de bares: búsqueda, filtro por estado y el estado de
  * todos los diálogos. Un solo punto de control hace el módulo escalable.
  */
-export function BaresManager({ bars }: { bars: Bar[] }) {
+export function BaresManager({
+  bars,
+  onOpenSymbols,
+}: {
+  bars: Bar[]
+  onOpenSymbols: (barId: string) => void
+}) {
   const [query, setQuery] = useState("")
   const [status, setStatus] = useState<BarStatus | "all">("all")
   const [dialog, setDialog] = useState<DialogState>({ kind: null, bar: null })
+  const [, startTransition] = useTransition()
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -58,7 +68,21 @@ export function BaresManager({ bars }: { bars: Bar[] }) {
     })
   }, [bars, query, status])
 
-  const open = (kind: BarDialogKind, bar: Bar) => setDialog({ kind, bar })
+  const open = (kind: BarDialogKind, bar: Bar) => {
+    // "symbols" no abre diálogo: enfoca la sección de símbolos en el padre.
+    if (kind === "symbols") {
+      onOpenSymbols(bar.id)
+      return
+    }
+    // Activar es reversible y seguro: se hace directo, sin confirmación.
+    if (kind === "activate") {
+      startTransition(() => {
+        void withToast(() => setBarActive(bar.id, true), "Bar activado")
+      })
+      return
+    }
+    setDialog({ kind, bar })
+  }
   const close = () => setDialog({ kind: null, bar: null })
 
   return (
@@ -135,8 +159,8 @@ export function BaresManager({ bars }: { bars: Bar[] }) {
         bar={dialog.bar}
         onClose={close}
       />
-      <DeleteBarDialog
-        open={dialog.kind === "delete"}
+      <DeactivateBarDialog
+        open={dialog.kind === "deactivate"}
         bar={dialog.bar}
         onClose={close}
       />

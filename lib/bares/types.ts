@@ -1,4 +1,4 @@
-export type BarStatus = "active" | "draft" | "paused"
+export type BarStatus = "active" | "inactive"
 
 export type Distribution = {
   /** % que se queda el bar */

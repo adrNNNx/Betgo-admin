@@ -1,11 +1,12 @@
 "use client"
 
 import { useEffect, useRef, useState, useTransition } from "react"
-import { UploadCloud, Trash2 } from "lucide-react"
+import { UploadCloud } from "lucide-react"
 
 import type { Bar } from "@/lib/bares/types"
-import { MAX_IMAGE_MB } from "@/config/bares"
-import { setBarImage, removeBarImage } from "@/lib/bares/actions"
+import { MAX_IMAGE_MB, IMAGE_ACCEPT } from "@/config/bares"
+import { setBarImage } from "@/lib/bares/actions"
+import { withToast } from "@/lib/run-action"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -56,17 +57,10 @@ export function BarImageDialog({
   const save = () => {
     if (!file) return
     const fd = new FormData()
-    fd.append("image", file)
+    fd.append("file", file)
     startTransition(async () => {
-      await setBarImage(bar.id, fd)
-      onClose()
-    })
-  }
-
-  const remove = () => {
-    startTransition(async () => {
-      await removeBarImage(bar.id)
-      onClose()
+      const ok = await withToast(() => setBarImage(bar.id, fd), "Imagen actualizada")
+      if (ok) onClose()
     })
   }
 
@@ -123,30 +117,19 @@ export function BarImageDialog({
           <input
             ref={inputRef}
             type="file"
-            accept="image/jpeg,image/png,image/gif,image/webp"
+            accept={IMAGE_ACCEPT}
             className="hidden"
             onChange={(e) => onPick(e.target.files?.[0])}
           />
         </div>
 
-        <DialogFooter className="sm:justify-between">
-          <Button
-            variant="outline"
-            className="text-destructive hover:text-destructive"
-            onClick={remove}
-            disabled={!bar.imageUrl || pending}
-          >
-            <Trash2 />
-            Eliminar imagen
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>
+            Cancelar
           </Button>
-          <div className="flex gap-2">
-            <Button variant="ghost" onClick={onClose}>
-              Cancelar
-            </Button>
-            <Button onClick={save} disabled={!file || pending}>
-              Guardar imagen
-            </Button>
-          </div>
+          <Button onClick={save} disabled={!file || pending}>
+            Guardar imagen
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

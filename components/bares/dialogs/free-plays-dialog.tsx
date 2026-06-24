@@ -6,6 +6,7 @@ import { Gift, Minus, Plus } from "lucide-react"
 import type { Bar } from "@/lib/bares/types"
 import { FREE_PLAYS_MAX } from "@/config/bares"
 import { setFreePlays } from "@/lib/bares/actions"
+import { withToast } from "@/lib/run-action"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -40,8 +41,11 @@ export function FreePlaysDialog({
 
   const submit = () => {
     startTransition(async () => {
-      await setFreePlays(bar.id, value)
-      onClose()
+      const ok = await withToast(
+        () => setFreePlays(bar.id, value),
+        "Jugadas actualizadas"
+      )
+      if (ok) onClose()
     })
   }
 

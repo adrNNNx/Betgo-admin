@@ -6,6 +6,7 @@ import { Wallet } from "lucide-react"
 import type { Bar } from "@/lib/bares/types"
 import { formatGs } from "@/lib/format"
 import { rechargeBalance } from "@/lib/bares/actions"
+import { withToast } from "@/lib/run-action"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -43,10 +44,19 @@ export function RechargeDialog({
 
   if (!bar) return null
 
+  // Mismo reparto que el backend (recharge-split.ts): empresa = remanente para
+  // que las 3 partes sumen exactamente el monto. Guaraníes → enteros.
+  const barShare = Math.round((amount * bar.distribution.bar) / 100)
+  const poolShare = Math.round((amount * bar.distribution.pozo) / 100)
+  const platformShare = amount - barShare - poolShare
+
   const submit = () => {
     startTransition(async () => {
-      await rechargeBalance(bar.id, amount, notes)
-      onClose()
+      const ok = await withToast(
+        () => rechargeBalance(bar.id, amount, notes),
+        "Saldo recargado"
+      )
+      if (ok) onClose()
     })
   }
 
@@ -92,11 +102,38 @@ export function RechargeDialog({
               </Button>
             ))}
           </div>
-          <p className="text-xs text-muted-foreground">
-            Nuevo saldo:{" "}
-            <strong className="text-foreground">{formatGs(bar.balance + amount)}</strong>
-          </p>
         </div>
+
+        {amount > 0 && (
+          // El monto se reparte según la distribución del bar: solo `barShare`
+          // entra al saldo del bar; el resto va al pozo y a la empresa.
+          <dl className="grid gap-1.5 rounded-lg border px-4 py-3 text-sm">
+            <div className="flex items-center justify-between">
+              <dt className="text-muted-foreground">
+                Al bar <span className="tabular-nums">({bar.distribution.bar}%)</span>
+              </dt>
+              <dd className="font-medium tabular-nums">{formatGs(barShare)}</dd>
+            </div>
+            <div className="flex items-center justify-between">
+              <dt className="text-muted-foreground">
+                Al pozo <span className="tabular-nums">({bar.distribution.pozo}%)</span>
+              </dt>
+              <dd className="font-medium tabular-nums">{formatGs(poolShare)}</dd>
+            </div>
+            <div className="flex items-center justify-between">
+              <dt className="text-muted-foreground">
+                Empresa <span className="tabular-nums">({bar.distribution.empresa}%)</span>
+              </dt>
+              <dd className="font-medium tabular-nums">{formatGs(platformShare)}</dd>
+            </div>
+            <div className="mt-1 flex items-center justify-between border-t pt-2">
+              <dt className="text-muted-foreground">Nuevo saldo del bar</dt>
+              <dd className="font-semibold tabular-nums">
+                {formatGs(bar.balance + barShare)}
+              </dd>
+            </div>
+          </dl>
+        )}
 
         <div className="grid gap-2">
           <Label htmlFor="notes">

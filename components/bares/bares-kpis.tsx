@@ -1,26 +1,19 @@
-import { Store, Wallet, Gift, Trophy } from "lucide-react"
+import { Store, Wallet, Building2, Trophy } from "lucide-react"
 
 import type { Bar } from "@/lib/bares/types"
+import type { PlatformKpis } from "@/lib/bares/api"
 import { formatGs } from "@/lib/format"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-export function BaresKpis({ bars }: { bars: Bar[] }) {
+export function BaresKpis({ bars, kpis }: { bars: Bar[]; kpis: PlatformKpis }) {
   const active = bars.filter((b) => b.status === "active").length
   const totalBalance = bars.reduce((sum, b) => sum + b.balance, 0)
-  const avgFreePlays =
-    bars.length === 0
-      ? 0
-      : Math.round(bars.reduce((s, b) => s + b.freePlaysPerDay, 0) / bars.length)
-  const avgPozo =
-    bars.length === 0
-      ? 0
-      : Math.round(bars.reduce((s, b) => s + b.distribution.pozo, 0) / bars.length)
 
   const items = [
     { label: "Bares activos", icon: Store, value: String(active), sub: `de ${bars.length} registrado${bars.length === 1 ? "" : "s"}` },
     { label: "Saldo en plataforma", icon: Wallet, value: formatGs(totalBalance), sub: "disponible para venta" },
-    { label: "Jugadas gratis / día", icon: Gift, value: String(avgFreePlays), sub: "promedio por bar" },
-    { label: "Aporte al pozo", icon: Trophy, value: `${avgPozo}%`, sub: "distribución promedio" },
+    { label: "Ganancia empresa", icon: Building2, value: formatGs(kpis.totalPlatformEarnings), sub: "acumulado por recargas" },
+    { label: "Aporte al pozo", icon: Trophy, value: formatGs(kpis.totalPoolCollected), sub: "recaudado para el pozo" },
   ]
 
   return (

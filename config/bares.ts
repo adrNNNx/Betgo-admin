@@ -10,13 +10,8 @@ export const BAR_STATUS: Record<
     className:
       "border-transparent bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400",
   },
-  draft: {
-    label: "Borrador",
-    className:
-      "border-transparent bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-500",
-  },
-  paused: {
-    label: "Pausado",
+  inactive: {
+    label: "Desactivado",
     className: "border-transparent bg-muted text-muted-foreground",
   },
 }
@@ -24,8 +19,7 @@ export const BAR_STATUS: Record<
 export const STATUS_FILTERS: { value: BarStatus | "all"; label: string }[] = [
   { value: "all", label: "Todos" },
   { value: "active", label: "Activos" },
-  { value: "draft", label: "Borrador" },
-  { value: "paused", label: "Pausados" },
+  { value: "inactive", label: "Desactivados" },
 ]
 
 /** Colores de cada segmento de la distribución (Bar / Pozo / Empresa). */
@@ -36,4 +30,5 @@ export const DISTRIBUTION_COLORS = {
 } as const
 
 export const FREE_PLAYS_MAX = 10
-export const MAX_IMAGE_MB = 5
+export const MAX_IMAGE_MB = 3 // alineado con el límite del backend (3MB)
+export const IMAGE_ACCEPT = "image/jpeg,image/png,image/gif,image/webp"
