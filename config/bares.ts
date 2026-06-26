@@ -32,3 +32,22 @@ export const DISTRIBUTION_COLORS = {
 export const FREE_PLAYS_MAX = 10
 export const MAX_IMAGE_MB = 3 // alineado con el límite del backend (3MB)
 export const IMAGE_ACCEPT = "image/jpeg,image/png,image/gif,image/webp"
+
+/** Peso máximo permitido para un símbolo de la máquina (backend admite hasta 1000). */
+export const SYMBOL_WEIGHT_MAX = 100
+
+/** Emojis sugeridos en el selector rápido al crear/editar un símbolo. */
+export const SYMBOL_EMOJIS = [
+  "🍀", "🍺", "🎰", "🔔", "💰", "⭐", "🍒", "🍋",
+  "💎", "👑", "🪙", "⚡", "🍇", "🃏", "🥨", "⚓",
+] as const
+
+/** Opciones de orden para la grilla/lista de símbolos. */
+export const SYMBOL_SORTS = [
+  { value: "weight-desc", label: "Mayor probabilidad" },
+  { value: "weight-asc", label: "Menor probabilidad" },
+  { value: "name", label: "Nombre (A–Z)" },
+  { value: "prize", label: "Con premio primero" },
+] as const
+
+export type SymbolSortKey = (typeof SYMBOL_SORTS)[number]["value"]

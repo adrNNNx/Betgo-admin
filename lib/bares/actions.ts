@@ -94,27 +94,38 @@ export async function setBarActive(barId: string, isActive: boolean) {
 export async function saveSymbol(barId: string, formData: FormData) {
   const id = formData.get("id")
   const name = String(formData.get("name") ?? "").trim()
-  const weight = Number(formData.get("weight")) || 100
+  const weight = Number(formData.get("weight")) || 10
+  // Imagen subida (principal) vs emoji elegido (fallback). La imagen manda.
+  const emoji = String(formData.get("emoji") ?? "").trim() || null
   const fileEntry = formData.get("file")
   const file =
     fileEntry instanceof File && fileEntry.size > 0 ? fileEntry : null
 
   if (typeof id === "string" && id) {
-    // Editar: datos por JSON; la imagen sólo si eligieron una nueva.
-    await send(`/symbols/${id}`, jsonInit("PATCH", { name, weight }))
+    // Editar: metadata por JSON. Si subieron imagen nueva va por PATCH /image;
+    // si no y eligieron emoji, lo guardamos como imageUrl.
+    const body: Record<string, unknown> = { name, weight }
+    if (!file && emoji) body.imageUrl = emoji
+    await send(`/symbols/${id}`, jsonInit("PATCH", body))
     if (file) await send(`/symbols/${id}/image`, fileInit("PATCH", file))
   } else {
-    // Crear: el símbolo es LOCAL del bar (barId presente → isJackpot=false).
-    if (!file) throw new Error("Subí una imagen para el símbolo.")
-    // ponytail: el POST exige imageUrl (NOT NULL); mandamos un placeholder y la
-    // imagen real va por PATCH /image acto seguido. Si el backend hiciera
-    // imageUrl opcional en create, este placeholder se podría borrar.
+    // Crear: la imagen es lo principal; el emoji es un fallback.
+    if (!file && !emoji) {
+      throw new Error("Subí una imagen o elegí un emoji para el símbolo.")
+    }
+    // imageUrl es NOT NULL: si hay imagen, sembramos el emoji (o un placeholder)
+    // y la imagen real entra acto seguido por PATCH /image.
     const res = await send(
       "/symbols",
-      jsonInit("POST", { name, weight, barId, imageUrl: "pending-upload" })
+      jsonInit("POST", {
+        name,
+        weight,
+        barId,
+        imageUrl: emoji ?? "pending-upload",
+      })
     )
     const created = (await res.json()) as { id: string }
-    await send(`/symbols/${created.id}/image`, fileInit("PATCH", file))
+    if (file) await send(`/symbols/${created.id}/image`, fileInit("PATCH", file))
   }
   revalidatePath("/bares")
 }
