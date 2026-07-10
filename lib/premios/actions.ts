@@ -27,6 +27,13 @@ const jsonInit = (method: string, body: unknown): RequestInit => ({
   body: JSON.stringify(body),
 })
 
+// Los premios/símbolos globales (barId = null) se administran desde el módulo
+// Pozo global, así que revalidamos ambas rutas ante cualquier cambio.
+function revalidate() {
+  revalidatePath("/premios")
+  revalidatePath("/pozo")
+}
+
 // Lee los campos comunes del form del premio.
 function readPrizeFields(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim()
@@ -63,7 +70,7 @@ export async function createPrize(barId: string | null, formData: FormData) {
     const created = (await res.json()) as { id: string }
     await send(`/prizes/${created.id}/toggle`, { method: "PATCH" })
   }
-  revalidatePath("/premios")
+  revalidate()
 }
 
 /** Edición de premio (PATCH JSON) + imagen aparte si se subió una nueva. */
@@ -85,7 +92,7 @@ export async function updatePrize(id: string, formData: FormData) {
     ifd.append("file", file)
     await send(`/prizes/${id}/image`, { method: "PATCH", body: ifd })
   }
-  revalidatePath("/premios")
+  revalidate()
 }
 
 /** Duplica un premio en el mismo ámbito (sin copiar la imagen). */
@@ -100,19 +107,19 @@ export async function duplicatePrize(
   if (prize.value !== null) fd.append("value", String(prize.value))
   if (prize.stock !== null) fd.append("stock", String(prize.stock))
   await send("/prizes", { method: "POST", body: fd })
-  revalidatePath("/premios")
+  revalidate()
 }
 
 /** Activa / desactiva un premio (PATCH /prizes/:id/toggle). */
 export async function togglePrize(id: string) {
   await send(`/prizes/${id}/toggle`, { method: "PATCH" })
-  revalidatePath("/premios")
+  revalidate()
 }
 
 /** Elimina un premio (y su imagen en Cloudinary lo maneja el backend). */
 export async function deletePrize(id: string) {
   await send(`/prizes/${id}`, { method: "DELETE" })
-  revalidatePath("/premios")
+  revalidate()
 }
 
 /**
@@ -121,5 +128,5 @@ export async function deletePrize(id: string) {
  */
 export async function assignSymbolPrize(symbolId: string, prizeId: string | null) {
   await send(`/symbols/${symbolId}`, jsonInit("PATCH", { prizeId }))
-  revalidatePath("/premios")
+  revalidate()
 }

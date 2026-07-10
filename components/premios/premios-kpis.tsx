@@ -13,10 +13,10 @@ export function PremiosKpis({ summary }: { summary: Summary }) {
       sub: `${summary.active} activos · ${summary.inactive} inactivos`,
     },
     {
-      label: "Ámbitos",
+      label: "Bares",
       icon: Store,
       value: String(summary.scopes),
-      sub: `${summary.scopes - 1} bares + pozo nacional`,
+      sub: summary.scopes === 1 ? "bar registrado" : "bares registrados",
     },
     {
       label: "Símbolos sin premio",

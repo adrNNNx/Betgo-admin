@@ -91,17 +91,8 @@ export async function getScopes(): Promise<Scope[]> {
     ;(symbolsBy.get(k) ?? symbolsBy.set(k, []).get(k)!).push(toSymbol(s))
   }
 
-  const globalScope: Scope = {
-    id: GLOBAL,
-    type: "global",
-    name: "Pozo nacional",
-    location: "Premios jackpot de toda la red",
-    barId: null,
-    imageUrl: null,
-    symbols: symbolsBy.get(GLOBAL) ?? [],
-    prizes: prizesBy.get(GLOBAL) ?? [],
-  }
-
+  // El ámbito global (pozo nacional) NO se administra acá: vive en el módulo
+  // Pozo global. Este módulo solo lista los bares.
   const barScopes: Scope[] = rawBars.map((b) => ({
     id: b.id,
     type: "bar",
@@ -113,5 +104,5 @@ export async function getScopes(): Promise<Scope[]> {
     prizes: prizesBy.get(b.id) ?? [],
   }))
 
-  return [globalScope, ...barScopes]
+  return barScopes
 }
