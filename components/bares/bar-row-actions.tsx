@@ -8,6 +8,7 @@ import {
   Pencil,
   Dices,
   Power,
+  QrCode,
 } from "lucide-react"
 
 import type { Bar } from "@/lib/bares/types"
@@ -50,6 +51,10 @@ export function BarRowActions({
         <DropdownMenuItem onClick={() => onAction("image", bar)}>
           <ImageIcon />
           Imagen del bar
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onAction("qr", bar)}>
+          <QrCode />
+          Código QR de acceso
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />

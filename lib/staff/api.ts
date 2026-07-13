@@ -51,8 +51,10 @@ function toMember(r: RawStaff): StaffMember {
 export async function getStaff(): Promise<StaffMember[]> {
   const res = await apiFetch("/staff")
   if (!res.ok) throw new Error("No se pudo cargar el personal")
-  const raw = (await res.json()) as RawStaff[]
-  return raw.map(toMember)
+  // GET /staff devuelve { data, total } (paginado); tomamos data.
+  const json = (await res.json()) as { data?: RawStaff[] } | RawStaff[]
+  const rows = Array.isArray(json) ? json : (json.data ?? [])
+  return rows.map(toMember)
 }
 
 /** Bares para filtros y selects. Reusa el endpoint real de bares (GET /bars). */

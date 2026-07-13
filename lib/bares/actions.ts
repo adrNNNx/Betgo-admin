@@ -35,6 +35,27 @@ const jsonInit = (method: string, body: unknown): RequestInit => ({
   body: JSON.stringify(body),
 })
 
+export type BarQr = {
+  slug: string
+  accessCode: string
+  /** URL de acceso que codifica el QR. */
+  url: string
+  /** QR como data URL (PNG base64). */
+  qrDataUrl: string
+}
+
+/** QR de acceso del bar (GET /bars/:id/qr). */
+export async function getBarQr(barId: string): Promise<BarQr> {
+  const res = await send(`/bars/${barId}/qr`, { method: "GET" })
+  const d = (await res.json()) as BarQr
+  return {
+    slug: d.slug,
+    accessCode: d.accessCode,
+    url: d.url,
+    qrDataUrl: d.qrDataUrl,
+  }
+}
+
 // Multipart con el campo `file` que esperan los endpoints de imagen. Sin
 // Content-Type manual: fetch arma el boundary solo.
 const fileInit = (method: string, file: File): RequestInit => {

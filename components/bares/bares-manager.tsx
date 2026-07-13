@@ -26,6 +26,7 @@ import { RechargeDialog } from "@/components/bares/dialogs/recharge-dialog"
 import { FreePlaysDialog } from "@/components/bares/dialogs/free-plays-dialog"
 import { BarImageDialog } from "@/components/bares/dialogs/bar-image-dialog"
 import { DeactivateBarDialog } from "@/components/bares/dialogs/deactivate-bar-dialog"
+import { BarQrDialog } from "@/components/bares/dialogs/bar-qr-dialog"
 
 export type BarDialogKind =
   | "create"
@@ -33,6 +34,7 @@ export type BarDialogKind =
   | "recharge"
   | "freeplays"
   | "image"
+  | "qr"
   | "deactivate"
   | "activate"
   | "symbols"
@@ -156,6 +158,11 @@ export function BaresManager({
       />
       <BarImageDialog
         open={dialog.kind === "image"}
+        bar={dialog.bar}
+        onClose={close}
+      />
+      <BarQrDialog
+        open={dialog.kind === "qr"}
         bar={dialog.bar}
         onClose={close}
       />
