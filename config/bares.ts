@@ -33,6 +33,12 @@ export const FREE_PLAYS_MAX = 10
 export const MAX_IMAGE_MB = 3 // alineado con el límite del backend (3MB)
 export const IMAGE_ACCEPT = "image/jpeg,image/png,image/gif,image/webp"
 
+/** Filas por página en el listado de bares. */
+export const BARS_PAGE_SIZE = 10
+
+/** Símbolos por página en la configuración de símbolos. */
+export const SYMBOLS_PAGE_SIZE = 12
+
 /** Peso máximo permitido para un símbolo de la máquina (backend admite hasta 1000). */
 export const SYMBOL_WEIGHT_MAX = 100
 

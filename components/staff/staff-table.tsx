@@ -1,11 +1,14 @@
 "use client"
 
-import { Store } from "lucide-react"
+import { ChevronLeft, ChevronRight, Store } from "lucide-react"
 
 import type { StaffMember } from "@/lib/staff/types"
 import type { StaffDialogKind } from "@/components/staff/staff-manager"
+import { STAFF_PAGE_SIZE } from "@/config/staff"
 import { initials, avatarColor } from "@/lib/staff/identifier"
 import { identifierKind, IDENTIFIER_META } from "@/lib/staff/identifier"
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 import {
   Table,
   TableBody,
@@ -21,12 +24,24 @@ import { StaffRowActions } from "@/components/staff/staff-row-actions"
 
 export function StaffTable({
   staff,
+  total,
+  page,
+  pending,
+  onPage,
   onAction,
+  onChanged,
 }: {
+  /** Miembros de la página actual. */
   staff: StaffMember[]
+  /** Total tras aplicar búsqueda y filtros (server-side). */
+  total: number
+  page: number
+  pending: boolean
+  onPage: (page: number) => void
   onAction: (kind: StaffDialogKind, member: StaffMember) => void
+  onChanged: () => void
 }) {
-  if (staff.length === 0) {
+  if (total === 0) {
     return (
       <div className="flex flex-col items-center gap-1 px-6 py-16 text-center">
         <p className="text-sm font-medium">No se encontraron miembros</p>
@@ -37,19 +52,31 @@ export function StaffTable({
     )
   }
 
+  const pageCount = Math.max(1, Math.ceil(total / STAFF_PAGE_SIZE))
+  const from = page * STAFF_PAGE_SIZE + 1
+  const to = Math.min(total, (page + 1) * STAFF_PAGE_SIZE)
+
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Miembro</TableHead>
-          <TableHead>Identificador</TableHead>
-          <TableHead>Bar asignado</TableHead>
-          <TableHead>Rol</TableHead>
-          <TableHead>Estado</TableHead>
-          <TableHead className="text-right">Acciones</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
+    <>
+      <div
+        className={cn(
+          "max-h-[560px] overflow-auto transition-opacity",
+          pending && "pointer-events-none opacity-60"
+        )}
+        aria-busy={pending}
+      >
+        <Table>
+          <TableHeader className="sticky top-0 z-10 bg-background">
+            <TableRow className="hover:bg-transparent">
+              <TableHead>Miembro</TableHead>
+              <TableHead>Identificador</TableHead>
+              <TableHead>Bar asignado</TableHead>
+              <TableHead>Rol</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead className="text-right">Acciones</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
         {staff.map((member) => {
           const kindLabel = IDENTIFIER_META[identifierKind(member.identifier)].label
           return (
@@ -89,12 +116,48 @@ export function StaffTable({
                 <StaffStatusBadge status={member.status} />
               </TableCell>
               <TableCell className="text-right">
-                <StaffRowActions member={member} onAction={onAction} />
+                <StaffRowActions
+                  member={member}
+                  onAction={onAction}
+                  onChanged={onChanged}
+                />
               </TableCell>
             </TableRow>
           )
-        })}
-      </TableBody>
-    </Table>
+            })}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* paginación */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t px-6 py-3.5">
+        <span className="text-xs text-muted-foreground tabular-nums">
+          Mostrando {from}–{to} de {total}
+        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground tabular-nums">
+            Página {page + 1} de {pageCount}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page === 0}
+            onClick={() => onPage(Math.max(0, page - 1))}
+          >
+            <ChevronLeft className="size-4" />
+            Anterior
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page >= pageCount - 1}
+            onClick={() => onPage(page + 1)}
+          >
+            Siguiente
+            <ChevronRight className="size-4" />
+          </Button>
+        </div>
+      </div>
+    </>
   )
 }

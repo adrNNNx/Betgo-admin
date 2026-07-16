@@ -15,5 +15,11 @@ export const PRIZE_STATUS_FILTERS: { value: PrizeStatus | "all"; label: string }
 /** Umbral de aviso de stock bajo (alineado con helpers.stockInfo). */
 export const LOW_STOCK_THRESHOLD = 5
 
+/** Filas por página en la tabla de premios. */
+export const PRIZES_PAGE_SIZE = 10
+
+/** Símbolos por página en la sección de asignación. */
+export const ASSIGN_PAGE_SIZE = 12
+
 // Reutilizamos los límites de imagen del módulo de bares (mismo backend).
 export { MAX_IMAGE_MB, IMAGE_ACCEPT } from "@/config/bares"

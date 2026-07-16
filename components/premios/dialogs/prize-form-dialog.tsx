@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { NumberInput } from "@/components/ui/number-input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
@@ -43,9 +44,9 @@ export function PrizeFormDialog({
   const editing = Boolean(prize)
   const isJackpot = scope.type === "global"
   const [name, setName] = useState("")
-  const [value, setValue] = useState("")
+  const [value, setValue] = useState<number | null>(null)
   const [unlimited, setUnlimited] = useState(true)
-  const [stock, setStock] = useState("")
+  const [stock, setStock] = useState<number | null>(null)
   const [desc, setDesc] = useState("")
   const [status, setStatus] = useState<"active" | "inactive">("active")
   const [file, setFile] = useState<File | null>(null)
@@ -57,9 +58,9 @@ export function PrizeFormDialog({
   useEffect(() => {
     if (!open) return
     setName(prize?.name ?? "")
-    setValue(prize?.value ? String(prize.value) : "")
+    setValue(prize?.value ?? null)
     setUnlimited(prize ? prize.stock === null : true)
-    setStock(prize?.stock != null ? String(prize.stock) : "")
+    setStock(prize?.stock ?? null)
     setDesc(prize?.desc ?? "")
     setStatus(prize?.status ?? "active")
     setFile(null)
@@ -80,15 +81,15 @@ export function PrizeFormDialog({
 
   const imageSrc =
     preview ?? (prize?.imageUrl && isImageSrc(prize.imageUrl) ? prize.imageUrl : null)
-  const valueNum = Number(value) || 0
+  const valueNum = value ?? 0
   const valid = name.trim().length > 0
 
   const submit = () => {
     const fd = new FormData()
     fd.append("name", name.trim())
-    fd.append("value", value.trim())
+    fd.append("value", value === null ? "" : String(value))
     fd.append("unlimited", String(unlimited))
-    fd.append("stock", unlimited ? "" : stock)
+    fd.append("stock", unlimited || stock === null ? "" : String(stock))
     fd.append("description", desc.trim())
     fd.append("status", status)
     if (file) fd.append("file", file)
@@ -151,12 +152,10 @@ export function PrizeFormDialog({
             Valor estimado{" "}
             <span className="font-normal text-muted-foreground">(opcional, Gs)</span>
           </Label>
-          <Input
+          <NumberInput
             id="pz-value"
-            type="number"
-            min={0}
             value={value}
-            onChange={(e) => setValue(e.target.value)}
+            onValueChange={setValue}
             placeholder="0"
             className="tabular-nums"
           />
@@ -173,11 +172,9 @@ export function PrizeFormDialog({
             <Switch checked={unlimited} onCheckedChange={setUnlimited} />
           </div>
           {!unlimited && (
-            <Input
-              type="number"
-              min={0}
+            <NumberInput
               value={stock}
-              onChange={(e) => setStock(e.target.value)}
+              onValueChange={setStock}
               placeholder="Cantidad en stock"
               className="tabular-nums"
             />

@@ -1,10 +1,12 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useRef, useState, useTransition } from "react"
 import { UserPlus, Search } from "lucide-react"
 
 import type { BarRef, StaffMember, StaffRole, StaffStatus } from "@/lib/staff/types"
-import { ROLE_FILTERS, STATUS_FILTERS } from "@/config/staff"
+import { DEFAULT_STAFF_QUERY } from "@/lib/staff/types"
+import { fetchStaff } from "@/lib/staff/actions"
+import { ROLE_FILTERS, STAFF_PAGE_SIZE, STATUS_FILTERS } from "@/config/staff"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -31,36 +33,60 @@ export type StaffDialogKind = "create" | "edit" | "suspend"
 type DialogState = { kind: StaffDialogKind | null; member: StaffMember | null }
 
 /**
- * Orquesta el listado de personal: búsqueda, filtros (bar / rol / estado) y el
- * estado de los diálogos. Un solo punto de control hace el módulo escalable.
+ * Orquesta el listado de personal. Búsqueda, filtros y paginación se resuelven
+ * en el backend, así la búsqueda encuentra en todo el staff (no solo en la
+ * página cargada) y el listado escala sin techo de registros.
  */
 export function StaffManager({
-  staff,
+  initialData,
+  initialTotal,
   bars,
 }: {
-  staff: StaffMember[]
+  initialData: StaffMember[]
+  initialTotal: number
   bars: BarRef[]
 }) {
-  const [query, setQuery] = useState("")
+  const [searchInput, setSearchInput] = useState("")
+  const [search, setSearch] = useState("")
   const [bar, setBar] = useState<string>("all")
   const [role, setRole] = useState<StaffRole | "all">("all")
   const [status, setStatus] = useState<StaffStatus | "all">("all")
+  const [page, setPage] = useState(0)
+  const [data, setData] = useState(initialData)
+  const [total, setTotal] = useState(initialTotal)
   const [dialog, setDialog] = useState<DialogState>({ kind: null, member: null })
+  // Se incrementa tras un alta/edición/cambio de estado para recargar la lista.
+  const [refresh, setRefresh] = useState(0)
+  const [pending, startTransition] = useTransition()
+  const firstRender = useRef(true)
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    return staff.filter((s) => {
-      const matchesQuery =
-        !q ||
-        s.name.toLowerCase().includes(q) ||
-        s.identifier.toLowerCase().includes(q)
-      const matchesBar = bar === "all" || s.barId === bar
-      const matchesRole = role === "all" || s.role === role
-      const matchesStatus = status === "all" || s.status === status
-      return matchesQuery && matchesBar && matchesRole && matchesStatus
+  // Debounce de la búsqueda → vuelve a la primera página.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearch(searchInput.trim())
+      setPage(0)
+    }, 300)
+    return () => clearTimeout(t)
+  }, [searchInput])
+
+  // Carga la página cuando cambian filtros/página, o tras una mutación.
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false
+      return
+    }
+    startTransition(async () => {
+      const res = await fetchStaff(
+        { ...DEFAULT_STAFF_QUERY, search, barId: bar, role, status },
+        page * STAFF_PAGE_SIZE,
+        STAFF_PAGE_SIZE
+      )
+      setData(res.data)
+      setTotal(res.total)
     })
-  }, [staff, query, bar, role, status])
+  }, [search, bar, role, status, page, refresh])
 
+  const onChanged = () => setRefresh((k) => k + 1)
   const open = (kind: StaffDialogKind, member: StaffMember) =>
     setDialog({ kind, member })
   const close = () => setDialog({ kind: null, member: null })
@@ -100,14 +126,20 @@ export function StaffManager({
           <div className="relative w-full max-w-xs">
             <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Buscar por nombre o identificador…"
               className="pl-8"
             />
           </div>
 
-          <Select value={bar} onValueChange={setBar}>
+          <Select
+            value={bar}
+            onValueChange={(v) => {
+              setBar(v)
+              setPage(0)
+            }}
+          >
             <SelectTrigger size="sm" className="w-[170px]">
               <SelectValue placeholder="Todos los bares" />
             </SelectTrigger>
@@ -121,7 +153,13 @@ export function StaffManager({
             </SelectContent>
           </Select>
 
-          <Select value={role} onValueChange={(v) => setRole(v as StaffRole | "all")}>
+          <Select
+            value={role}
+            onValueChange={(v) => {
+              setRole(v as StaffRole | "all")
+              setPage(0)
+            }}
+          >
             <SelectTrigger size="sm" className="w-[160px]">
               <SelectValue placeholder="Todos los roles" />
             </SelectTrigger>
@@ -137,7 +175,11 @@ export function StaffManager({
           <ToggleGroup
             type="single"
             value={status}
-            onValueChange={(v) => v && setStatus(v as StaffStatus | "all")}
+            onValueChange={(v) => {
+              if (!v) return
+              setStatus(v as StaffStatus | "all")
+              setPage(0)
+            }}
             variant="outline"
             size="sm"
             className="ml-auto"
@@ -150,12 +192,20 @@ export function StaffManager({
           </ToggleGroup>
 
           <span className="rounded-full border px-2.5 py-1 text-xs font-medium text-muted-foreground">
-            {filtered.length} {filtered.length === 1 ? "miembro" : "miembros"}
+            {total} {total === 1 ? "miembro" : "miembros"}
           </span>
         </div>
 
         <CardContent className="px-0 pb-0">
-          <StaffTable staff={filtered} onAction={open} />
+          <StaffTable
+            staff={data}
+            total={total}
+            page={page}
+            pending={pending}
+            onPage={setPage}
+            onAction={open}
+            onChanged={onChanged}
+          />
         </CardContent>
       </Card>
 
@@ -165,11 +215,13 @@ export function StaffManager({
         member={dialog.kind === "edit" ? dialog.member : null}
         bars={bars}
         onClose={close}
+        onChanged={onChanged}
       />
       <SuspendStaffDialog
         open={dialog.kind === "suspend"}
         member={dialog.member}
         onClose={close}
+        onChanged={onChanged}
       />
     </>
   )

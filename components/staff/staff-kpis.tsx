@@ -1,32 +1,29 @@
 import { UserCheck, HandPlatter, ShieldCheck, UserX } from "lucide-react"
 
-import type { StaffMember } from "@/lib/staff/types"
+import type { StaffSummary } from "@/lib/staff/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-export function StaffKpis({ staff }: { staff: StaffMember[] }) {
-  const total = staff.length
-  const active = staff.filter((s) => s.status === "active").length
-  const mozos = staff.filter((s) => s.role === "mozo").length
-  const managers = staff.filter((s) => s.role !== "mozo").length
-  const noAccess = staff.filter((s) => s.status !== "active").length
+/** KPIs del personal. Los totales vienen agregados del backend (tabla paginada). */
+export function StaffKpis({ summary }: { summary: StaffSummary }) {
+  const noAccess = summary.inactive + summary.suspended
 
   const items = [
     {
       label: "Personal habilitado",
       icon: UserCheck,
-      value: String(active),
-      sub: `de ${total} registrado${total === 1 ? "" : "s"}`,
+      value: String(summary.active),
+      sub: `de ${summary.total} registrado${summary.total === 1 ? "" : "s"}`,
     },
     {
       label: "Mozos",
       icon: HandPlatter,
-      value: String(mozos),
+      value: String(summary.mozos),
       sub: "atienden y cargan créditos",
     },
     {
       label: "Encargados y admins",
       icon: ShieldCheck,
-      value: String(managers),
+      value: String(summary.managers),
       sub: "gestionan el bar",
     },
     {

@@ -1,10 +1,10 @@
 "use client"
 
-import { useMemo, useState, useTransition } from "react"
+import { useEffect, useMemo, useState, useTransition } from "react"
 import { Plus, Search } from "lucide-react"
 
 import type { Bar, BarStatus } from "@/lib/bares/types"
-import { STATUS_FILTERS } from "@/config/bares"
+import { BARS_PAGE_SIZE, STATUS_FILTERS } from "@/config/bares"
 import { setBarActive } from "@/lib/bares/actions"
 import { withToast } from "@/lib/run-action"
 import { Button } from "@/components/ui/button"
@@ -54,6 +54,7 @@ export function BaresManager({
 }) {
   const [query, setQuery] = useState("")
   const [status, setStatus] = useState<BarStatus | "all">("all")
+  const [page, setPage] = useState(0)
   const [dialog, setDialog] = useState<DialogState>({ kind: null, bar: null })
   const [, startTransition] = useTransition()
 
@@ -69,6 +70,16 @@ export function BaresManager({
       return matchesQuery && matchesStatus
     })
   }, [bars, query, status])
+
+  // Al cambiar búsqueda/filtro (o si se achica la lista) volvemos a la 1ª página.
+  useEffect(() => {
+    setPage(0)
+  }, [query, status])
+
+  const pageBars = useMemo(
+    () => filtered.slice(page * BARS_PAGE_SIZE, (page + 1) * BARS_PAGE_SIZE),
+    [filtered, page]
+  )
 
   const open = (kind: BarDialogKind, bar: Bar) => {
     // "symbols" no abre diálogo: enfoca la sección de símbolos en el padre.
@@ -136,7 +147,13 @@ export function BaresManager({
         </div>
 
         <CardContent className="px-0 pb-0">
-          <BaresTable bars={filtered} onAction={open} />
+          <BaresTable
+            bars={pageBars}
+            total={filtered.length}
+            page={page}
+            onPage={setPage}
+            onAction={open}
+          />
         </CardContent>
       </Card>
 

@@ -1,10 +1,19 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import { LayoutGrid, List, Pencil, Plus, Search, Trash2 } from "lucide-react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import {
+  ChevronLeft,
+  ChevronRight,
+  LayoutGrid,
+  List,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+} from "lucide-react"
 
 import type { Bar, BarSymbol } from "@/lib/bares/types"
-import { SYMBOL_SORTS, type SymbolSortKey } from "@/config/bares"
+import { SYMBOLS_PAGE_SIZE, SYMBOL_SORTS, type SymbolSortKey } from "@/config/bares"
 import {
   formatProbability,
   isImageSrc,
@@ -86,13 +95,26 @@ export function BarSymbols({
   const [symQuery, setSymQuery] = useState("")
   const [sort, setSort] = useState<SymbolSortKey>("weight-desc")
   const [view, setView] = useState<"grid" | "list">("grid")
+  const [page, setPage] = useState(0)
   const [dialog, setDialog] = useState<{ open: boolean; symbol: BarSymbol | null }>({
     open: false,
     symbol: null,
   })
   const [deleting, setDeleting] = useState<BarSymbol | null>(null)
 
+  const activeBarRef = useRef<HTMLButtonElement>(null)
+
   const bar = bars.find((b) => b.id === activeBarId) ?? bars[0]
+
+  // Al cambiar de bar, buscar u ordenar, volvemos a la primera página.
+  useEffect(() => {
+    setPage(0)
+  }, [activeBarId, symQuery, sort])
+
+  // Trae el bar activo a la vista del rail (p. ej. al elegirlo desde la tabla).
+  useEffect(() => {
+    activeBarRef.current?.scrollIntoView({ block: "nearest" })
+  }, [activeBarId])
 
   const filteredBars = useMemo(() => {
     const q = barQuery.trim().toLowerCase()
@@ -142,6 +164,14 @@ export function BarSymbols({
   const total = totalWeight(bar.symbols)
   const withPrize = bar.symbols.filter((s) => s.hasPrize).length
 
+  const pageCount = Math.max(1, Math.ceil(symbols.length / SYMBOLS_PAGE_SIZE))
+  const pageSymbols = symbols.slice(
+    page * SYMBOLS_PAGE_SIZE,
+    (page + 1) * SYMBOLS_PAGE_SIZE
+  )
+  const from = symbols.length === 0 ? 0 : page * SYMBOLS_PAGE_SIZE + 1
+  const to = Math.min(symbols.length, (page + 1) * SYMBOLS_PAGE_SIZE)
+
   const onEdit = (symbol: BarSymbol) => setDialog({ open: true, symbol })
   const onDelete = (symbol: BarSymbol) => setDeleting(symbol)
 
@@ -167,7 +197,8 @@ export function BarSymbols({
               className="pl-8"
             />
           </div>
-          <div className="flex max-h-[480px] flex-col gap-0.5 overflow-y-auto p-2">
+          {/* Rail = selector: buscador + scroll (~10 bares visibles), no paginación. */}
+          <div className="flex max-h-[460px] flex-col gap-0.5 overflow-y-auto p-2">
             {filteredBars.length === 0 ? (
               <p className="px-3 py-6 text-center text-sm text-muted-foreground">
                 Sin resultados
@@ -177,6 +208,7 @@ export function BarSymbols({
                 <button
                   key={b.id}
                   type="button"
+                  ref={b.id === bar.id ? activeBarRef : undefined}
                   onClick={() => onActiveBarChange(b.id)}
                   className={cn(
                     "flex w-full items-center gap-2.5 rounded-md border border-transparent px-2 py-2 text-left transition-colors hover:bg-accent",
@@ -202,6 +234,11 @@ export function BarSymbols({
               ))
             )}
           </div>
+          {barQuery.trim() && filteredBars.length > 0 && (
+            <p className="border-t px-3 py-2 text-[11px] text-muted-foreground tabular-nums">
+              {filteredBars.length} de {bars.length} bares
+            </p>
+          )}
         </aside>
 
         {/* ============ PANEL: símbolos del bar activo ============ */}
@@ -267,7 +304,7 @@ export function BarSymbols({
           </div>
 
           {/* contenido */}
-          <div className="overflow-x-auto p-5">
+          <div className="max-h-[520px] overflow-auto p-5">
             {symbols.length === 0 ? (
               <p className="px-3 py-10 text-center text-sm text-muted-foreground">
                 {symQuery
@@ -276,17 +313,19 @@ export function BarSymbols({
               </p>
             ) : view === "grid" ? (
               <div className="grid grid-cols-[repeat(auto-fill,minmax(168px,1fr))] gap-3.5">
-                {symbols.map((s) => (
+                {pageSymbols.map((s) => (
                   <SymbolCard key={s.id} symbol={s} onEdit={onEdit} onDelete={onDelete} />
                 ))}
-                <button
-                  type="button"
-                  onClick={() => setDialog({ open: true, symbol: null })}
-                  className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-lg border border-dashed text-muted-foreground transition-colors hover:border-ring hover:text-foreground"
-                >
-                  <Plus className="size-5" />
-                  <span className="text-sm font-medium">Nuevo símbolo</span>
-                </button>
+                {page === pageCount - 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setDialog({ open: true, symbol: null })}
+                    className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-lg border border-dashed text-muted-foreground transition-colors hover:border-ring hover:text-foreground"
+                  >
+                    <Plus className="size-5" />
+                    <span className="text-sm font-medium">Nuevo símbolo</span>
+                  </button>
+                )}
               </div>
             ) : (
               <div className="flex min-w-[470px] flex-col">
@@ -300,12 +339,44 @@ export function BarSymbols({
                   <span>Premio</span>
                   <span className="text-right">Acciones</span>
                 </div>
-                {symbols.map((s) => (
+                {pageSymbols.map((s) => (
                   <SymbolRow key={s.id} symbol={s} onEdit={onEdit} onDelete={onDelete} />
                 ))}
               </div>
             )}
           </div>
+
+          {/* paginación */}
+          {symbols.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t px-5 py-3.5">
+              <span className="text-xs text-muted-foreground tabular-nums">
+                Mostrando {from}–{to} de {symbols.length}
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  Página {page + 1} de {pageCount}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 0}
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                >
+                  <ChevronLeft className="size-4" />
+                  Anterior
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= pageCount - 1}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Siguiente
+                  <ChevronRight className="size-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

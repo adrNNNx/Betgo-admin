@@ -34,11 +34,13 @@ export function StaffFormDialog({
   member,
   bars,
   onClose,
+  onChanged,
 }: {
   open: boolean
   member: StaffMember | null
   bars: BarRef[]
   onClose: () => void
+  onChanged: () => void
 }) {
   const isEdit = Boolean(member)
   const [name, setName] = useState("")
@@ -81,7 +83,9 @@ export function StaffFormDialog({
           }),
         isEdit ? "Staff actualizado" : "Staff creado"
       )
-      if (ok) onClose()
+      if (!ok) return
+      onChanged()
+      onClose()
     })
   }
 

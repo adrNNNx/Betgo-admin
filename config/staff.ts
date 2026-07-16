@@ -67,3 +67,6 @@ export const STATUS_FILTERS: { value: StaffStatus | "all"; label: string }[] = [
 /** Orden de roles para selects de alta/edición. */
 export const ROLE_OPTIONS: StaffRole[] = ["mozo", "encargado", "admin_bar"]
 export const STATUS_OPTIONS: StaffStatus[] = ["active", "inactive", "suspended"]
+
+/** Filas por página en el listado de personal. */
+export const STAFF_PAGE_SIZE = 10

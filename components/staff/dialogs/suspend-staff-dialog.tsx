@@ -25,10 +25,12 @@ export function SuspendStaffDialog({
   open,
   member,
   onClose,
+  onChanged,
 }: {
   open: boolean
   member: StaffMember | null
   onClose: () => void
+  onChanged: () => void
 }) {
   const [pending, startTransition] = useTransition()
   const reactivate = member?.status === "suspended"
@@ -40,7 +42,9 @@ export function SuspendStaffDialog({
         () => setStaffStatus(member.id, reactivate ? "active" : "suspended"),
         reactivate ? "Acceso reactivado" : "Acceso suspendido"
       )
-      if (ok) onClose()
+      if (!ok) return
+      onChanged()
+      onClose()
     })
   }
 

@@ -28,9 +28,11 @@ import {
 export function StaffRowActions({
   member,
   onAction,
+  onChanged,
 }: {
   member: StaffMember
   onAction: (kind: StaffDialogKind, member: StaffMember) => void
+  onChanged: () => void
 }) {
   const [pending, startTransition] = useTransition()
   const isActive = member.status === "active"
@@ -38,8 +40,12 @@ export function StaffRowActions({
   const isSuspended = member.status === "suspended"
 
   const change = (status: StaffMember["status"]) =>
-    startTransition(() => {
-      void withToast(() => setStaffStatus(member.id, status), "Estado actualizado")
+    startTransition(async () => {
+      const ok = await withToast(
+        () => setStaffStatus(member.id, status),
+        "Estado actualizado"
+      )
+      if (ok) onChanged()
     })
 
   return (

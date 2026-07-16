@@ -1,11 +1,15 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import { List, Plus, Search } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { ChevronLeft, ChevronRight, List, Plus, Search } from "lucide-react"
 
 import type { Prize, PrizeStatus, PrizeType, Scope } from "@/lib/premios/types"
 import { symbolsForPrize } from "@/lib/premios/helpers"
-import { PRIZE_STATUS_FILTERS, PRIZE_TYPE_FILTERS } from "@/config/premios"
+import {
+  PRIZES_PAGE_SIZE,
+  PRIZE_STATUS_FILTERS,
+  PRIZE_TYPE_FILTERS,
+} from "@/config/premios"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
@@ -40,6 +44,7 @@ export function PrizeTable({
   const [search, setSearch] = useState("")
   const [tipo, setTipo] = useState<PrizeType | "all">("all")
   const [estado, setEstado] = useState<PrizeStatus | "all">("all")
+  const [page, setPage] = useState(0)
 
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -51,6 +56,16 @@ export function PrizeTable({
       return matchesType && matchesStatus && matchesQuery
     })
   }, [scope.prizes, search, tipo, estado])
+
+  // Al cambiar de ámbito, buscar o filtrar, volvemos a la primera página.
+  useEffect(() => {
+    setPage(0)
+  }, [scope.id, search, tipo, estado])
+
+  const pageCount = Math.max(1, Math.ceil(rows.length / PRIZES_PAGE_SIZE))
+  const pageRows = rows.slice(page * PRIZES_PAGE_SIZE, (page + 1) * PRIZES_PAGE_SIZE)
+  const from = rows.length === 0 ? 0 : page * PRIZES_PAGE_SIZE + 1
+  const to = Math.min(rows.length, (page + 1) * PRIZES_PAGE_SIZE)
 
   return (
     <div className="px-5 py-4">
@@ -111,10 +126,10 @@ export function PrizeTable({
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border">
+      <div className="max-h-[520px] overflow-auto rounded-lg border">
         <Table>
-          <TableHeader>
-            <TableRow>
+          <TableHeader className="sticky top-0 z-10 bg-background">
+            <TableRow className="hover:bg-transparent">
               <TableHead>Premio</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>Valor estimado</TableHead>
@@ -132,7 +147,7 @@ export function PrizeTable({
                 </TableCell>
               </TableRow>
             ) : (
-              rows.map((p) => {
+              pageRows.map((p) => {
                 const syms = symbolsForPrize(scope, p.id)
                 return (
                   <TableRow key={p.id}>
@@ -191,6 +206,38 @@ export function PrizeTable({
           </TableBody>
         </Table>
       </div>
+
+      {/* paginación */}
+      {rows.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <span className="text-xs text-muted-foreground tabular-nums">
+            Mostrando {from}–{to} de {rows.length}
+          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground tabular-nums">
+              Página {page + 1} de {pageCount}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === 0}
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+            >
+              <ChevronLeft className="size-4" />
+              Anterior
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= pageCount - 1}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Siguiente
+              <ChevronRight className="size-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

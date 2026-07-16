@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache"
 
 import { apiFetch } from "@/lib/session"
-import type { StaffRole, StaffStatus } from "@/lib/staff/types"
+import { getStaffPage, type StaffPage } from "@/lib/staff/api"
+import type { StaffQuery, StaffRole, StaffStatus } from "@/lib/staff/types"
 
 /** Llama al backend; tira con el mensaje del backend si falla. */
 async function send(path: string, init: RequestInit): Promise<Response> {
@@ -27,6 +28,15 @@ const jsonInit = (method: string, body: unknown): RequestInit => ({
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify(body),
 })
+
+/** Trae una página del listado (para la paginación/filtros del cliente). */
+export async function fetchStaff(
+  q: StaffQuery,
+  offset: number,
+  limit: number
+): Promise<StaffPage> {
+  return getStaffPage(q, limit, offset)
+}
 
 export type StaffFormInput = {
   id?: string

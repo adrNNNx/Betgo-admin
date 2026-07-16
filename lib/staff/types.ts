@@ -26,3 +26,19 @@ export type BarRef = {
   id: string
   name: string
 }
+
+/** Filtros del listado. Se resuelven en el backend (paginación correcta). */
+export type StaffQuery = {
+  search: string
+  /** id de bar, o "all" */
+  barId: string
+  role: StaffRole | "all"
+  status: StaffStatus | "all"
+}
+
+export const DEFAULT_STAFF_QUERY: StaffQuery = {
+  search: "",
+  barId: "all",
+  role: "all",
+  status: "all",
+}

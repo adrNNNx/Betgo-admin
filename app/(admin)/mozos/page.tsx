@@ -1,14 +1,24 @@
-import { getStaff, getStaffBars } from "@/lib/staff/api"
+import { getStaffBars, getStaffPage, getStaffSummary } from "@/lib/staff/api"
+import { DEFAULT_STAFF_QUERY } from "@/lib/staff/types"
+import { STAFF_PAGE_SIZE } from "@/config/staff"
 import { StaffKpis } from "@/components/staff/staff-kpis"
 import { StaffManager } from "@/components/staff/staff-manager"
 
 export default async function MozosPage() {
-  const [staff, bars] = await Promise.all([getStaff(), getStaffBars()])
+  const [page, summary, bars] = await Promise.all([
+    getStaffPage(DEFAULT_STAFF_QUERY, STAFF_PAGE_SIZE, 0),
+    getStaffSummary(),
+    getStaffBars(),
+  ])
 
   return (
     <>
-      <StaffKpis staff={staff} />
-      <StaffManager staff={staff} bars={bars} />
+      <StaffKpis summary={summary} />
+      <StaffManager
+        initialData={page.data}
+        initialTotal={page.total}
+        bars={bars}
+      />
     </>
   )
 }

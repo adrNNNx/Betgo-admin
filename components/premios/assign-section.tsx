@@ -1,10 +1,17 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import { AlertTriangle, Link as LinkIcon, Plus } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import {
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  Link as LinkIcon,
+  Plus,
+} from "lucide-react"
 
 import type { Scope, SlotSymbol } from "@/lib/premios/types"
 import { formatPct, prizeById, stockShort, symTotal, unassignedSymbols } from "@/lib/premios/helpers"
+import { ASSIGN_PAGE_SIZE } from "@/config/premios"
 import { formatGs } from "@/lib/format"
 import { Button } from "@/components/ui/button"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
@@ -23,6 +30,7 @@ export function AssignSection({
   onAssign: (symbol: SlotSymbol) => void
 }) {
   const [assignOnly, setAssignOnly] = useState(false)
+  const [page, setPage] = useState(0)
   const total = symTotal(scope)
   const unass = unassignedSymbols(scope).length
 
@@ -33,6 +41,16 @@ export function AssignSection({
       (a, b) => Number(!!a.prizeId) - Number(!!b.prizeId) || b.weight - a.weight
     )
   }, [scope.symbols, assignOnly, total])
+
+  // Al cambiar de ámbito o de filtro, volvemos a la primera página.
+  useEffect(() => {
+    setPage(0)
+  }, [scope.id, assignOnly])
+
+  const pageCount = Math.max(1, Math.ceil(syms.length / ASSIGN_PAGE_SIZE))
+  const pageSyms = syms.slice(page * ASSIGN_PAGE_SIZE, (page + 1) * ASSIGN_PAGE_SIZE)
+  const from = syms.length === 0 ? 0 : page * ASSIGN_PAGE_SIZE + 1
+  const to = Math.min(syms.length, (page + 1) * ASSIGN_PAGE_SIZE)
 
   return (
     <div className="border-b px-5 py-4">
@@ -67,8 +85,9 @@ export function AssignSection({
             : "Este ámbito todavía no tiene símbolos. Se crean en la sección Bares."}
         </p>
       ) : (
+        <div className="max-h-[480px] overflow-y-auto">
         <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3">
-          {syms.map((s) => {
+          {pageSyms.map((s) => {
             const prize = s.prizeId ? prizeById(scope, s.prizeId) : null
             return (
               <div
@@ -118,6 +137,39 @@ export function AssignSection({
               </div>
             )
           })}
+        </div>
+        </div>
+      )}
+
+      {/* paginación */}
+      {syms.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <span className="text-xs text-muted-foreground tabular-nums">
+            Mostrando {from}–{to} de {syms.length}
+          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground tabular-nums">
+              Página {page + 1} de {pageCount}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === 0}
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+            >
+              <ChevronLeft className="size-4" />
+              Anterior
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= pageCount - 1}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Siguiente
+              <ChevronRight className="size-4" />
+            </Button>
+          </div>
         </div>
       )}
     </div>

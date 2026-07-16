@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Search } from "lucide-react"
 
 import type { Scope } from "@/lib/premios/types"
@@ -28,6 +28,12 @@ export function ScopeRail({
   onSelect: (id: string) => void
 }) {
   const [q, setQ] = useState("")
+  const activeRef = useRef<HTMLButtonElement>(null)
+
+  // Trae el ámbito activo a la vista del rail.
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ block: "nearest" })
+  }, [activeId])
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase()
@@ -59,7 +65,8 @@ export function ScopeRail({
           className="pl-8"
         />
       </div>
-      <div className="flex max-h-[520px] flex-col gap-0.5 overflow-y-auto p-2">
+      {/* Rail = selector: buscador + scroll (~10 ámbitos visibles), no paginación. */}
+      <div className="flex max-h-[460px] flex-col gap-0.5 overflow-y-auto p-2">
         {filtered.length === 0 ? (
           <p className="px-3 py-6 text-center text-sm text-muted-foreground">Sin resultados</p>
         ) : (
@@ -69,6 +76,7 @@ export function ScopeRail({
               <button
                 key={s.id}
                 type="button"
+                ref={s.id === activeId ? activeRef : undefined}
                 onClick={() => onSelect(s.id)}
                 className={cn(
                   "flex w-full items-center gap-2.5 rounded-md border border-transparent px-2 py-2 text-left transition-colors hover:bg-accent",
@@ -103,6 +111,11 @@ export function ScopeRail({
           })
         )}
       </div>
+      {q.trim() && filtered.length > 0 && (
+        <p className="border-t px-3 py-2 text-[11px] text-muted-foreground tabular-nums">
+          {filtered.length} de {scopes.length} ámbitos
+        </p>
+      )}
     </aside>
   )
 }

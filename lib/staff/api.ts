@@ -2,7 +2,13 @@ import "server-only"
 
 import { apiFetch } from "@/lib/session"
 import { getBars } from "@/lib/bares/api"
-import type { BarRef, StaffMember, StaffRole, StaffStatus } from "@/lib/staff/types"
+import type {
+  BarRef,
+  StaffMember,
+  StaffQuery,
+  StaffRole,
+  StaffStatus,
+} from "@/lib/staff/types"
 
 // Forma que devuelve GET /staff (staff + user + bar), tal cual el `format()`
 // del backend.
@@ -47,14 +53,46 @@ function toMember(r: RawStaff): StaffMember {
   }
 }
 
-/** Listado de personal para el panel admin (GET /staff, solo ADMIN). */
-export async function getStaff(): Promise<StaffMember[]> {
-  const res = await apiFetch("/staff")
+export type StaffPage = { data: StaffMember[]; total: number }
+
+/**
+ * Página del listado de personal (GET /staff, solo ADMIN).
+ *
+ * Búsqueda, filtros y paginación se resuelven en el backend: así buscar encuentra
+ * en TODO el staff, no solo en la página cargada, y no hay techo de registros.
+ */
+export async function getStaffPage(
+  q: StaffQuery,
+  limit: number,
+  offset: number
+): Promise<StaffPage> {
+  const qs = new URLSearchParams({ limit: String(limit), offset: String(offset) })
+  if (q.search.trim()) qs.set("search", q.search.trim())
+  if (q.barId !== "all") qs.set("barId", q.barId)
+  if (q.role !== "all") qs.set("role", q.role)
+  if (q.status !== "all") qs.set("status", q.status)
+
+  const res = await apiFetch(`/staff?${qs.toString()}`)
   if (!res.ok) throw new Error("No se pudo cargar el personal")
-  // GET /staff devuelve { data, total } (paginado); tomamos data.
-  const json = (await res.json()) as { data?: RawStaff[] } | RawStaff[]
-  const rows = Array.isArray(json) ? json : (json.data ?? [])
-  return rows.map(toMember)
+  const json = (await res.json()) as { data?: RawStaff[]; total?: number } | null
+  const rows = json?.data ?? []
+  return { data: rows.map(toMember), total: json?.total ?? rows.length }
+}
+
+export type StaffSummary = {
+  total: number
+  active: number
+  inactive: number
+  suspended: number
+  mozos: number
+  managers: number
+}
+
+/** Totales del staff para los KPIs (GET /staff/summary): la tabla está paginada. */
+export async function getStaffSummary(): Promise<StaffSummary> {
+  const res = await apiFetch("/staff/summary")
+  if (!res.ok) throw new Error("No se pudo cargar el resumen del personal")
+  return (await res.json()) as StaffSummary
 }
 
 /** Bares para filtros y selects. Reusa el endpoint real de bares (GET /bars). */

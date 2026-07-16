@@ -16,7 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { NumberInput } from "@/components/ui/number-input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
@@ -34,11 +34,11 @@ export function ManualAdjustment({
 }) {
   const cardId = useId()
   const [direction, setDirection] = useState<AdjustDirection>("add")
-  const [amountRaw, setAmountRaw] = useState("")
+  const [amountRaw, setAmountRaw] = useState<number | null>(null)
   const [notes, setNotes] = useState("")
   const [pending, startTransition] = useTransition()
 
-  const amount = Math.max(0, Number(amountRaw) || 0)
+  const amount = Math.max(0, amountRaw ?? 0)
   const signed = direction === "add" ? amount : -amount
   const result = pool.amount + signed
   const negative = result < 0
@@ -46,7 +46,7 @@ export function ManualAdjustment({
   const canApply = amount > 0 && !negative && reason.length > 0 && !pending
 
   function reset() {
-    setAmountRaw("")
+    setAmountRaw(null)
     setNotes("")
   }
 
@@ -115,13 +115,10 @@ export function ManualAdjustment({
               <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
                 Gs.
               </span>
-              <Input
+              <NumberInput
                 id={`${cardId}-amount`}
-                type="number"
-                min={0}
-                inputMode="numeric"
                 value={amountRaw}
-                onChange={(e) => setAmountRaw(e.target.value)}
+                onValueChange={setAmountRaw}
                 placeholder="0"
                 className="h-11 pl-10 text-base font-semibold tabular-nums"
               />
@@ -131,7 +128,7 @@ export function ManualAdjustment({
                 <button
                   key={q}
                   type="button"
-                  onClick={() => setAmountRaw(String(amount + q))}
+                  onClick={() => setAmountRaw(amount + q)}
                   className="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-accent"
                 >
                   {formatNumber(q)}

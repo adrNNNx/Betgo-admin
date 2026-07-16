@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { NumberInput } from "@/components/ui/number-input"
 import { Label } from "@/components/ui/label"
 
 const PCT_FIELDS = [
@@ -112,14 +113,13 @@ export function BarFormDialog({
                     <span className={cn("size-1.5 rounded-sm", f.color)} />
                     {f.label}
                   </span>
-                  <Input
-                    type="number"
-                    min={0}
+                  <NumberInput
                     max={100}
                     value={dist[f.key]}
-                    onChange={(e) =>
-                      setDist((d) => ({ ...d, [f.key]: Number(e.target.value) || 0 }))
+                    onValueChange={(v) =>
+                      setDist((d) => ({ ...d, [f.key]: v ?? 0 }))
                     }
+                    className="tabular-nums"
                   />
                 </div>
               ))}

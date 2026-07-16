@@ -15,7 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { NumberInput } from "@/components/ui/number-input"
 import { Label } from "@/components/ui/label"
 
 /** Configura el costo por tirada de la tragaperras del pozo global. */
@@ -26,10 +26,10 @@ export function GameCostConfig({
   cost: number
   onSaved?: (cost: number) => void
 }) {
-  const [value, setValue] = useState(String(cost))
+  const [value, setValue] = useState<number | null>(cost)
   const [pending, startTransition] = useTransition()
 
-  const parsed = Number(value) || 0
+  const parsed = value ?? 0
   const changed = parsed !== cost
   const canSave = changed && parsed > 0 && !pending
 
@@ -64,13 +64,11 @@ export function GameCostConfig({
               <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
                 Gs.
               </span>
-              <Input
+              <NumberInput
                 id="cost-per-spin"
-                type="number"
-                min={0}
-                inputMode="numeric"
                 value={value}
-                onChange={(e) => setValue(e.target.value)}
+                onValueChange={setValue}
+                placeholder="0"
                 className="h-11 pl-10 text-base font-semibold tabular-nums"
               />
             </div>
@@ -79,7 +77,7 @@ export function GameCostConfig({
                 <button
                   key={q}
                   type="button"
-                  onClick={() => setValue(String(q))}
+                  onClick={() => setValue(q)}
                   className="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-accent"
                 >
                   {formatNumber(q)}
@@ -96,7 +94,7 @@ export function GameCostConfig({
             <Button
               variant="ghost"
               disabled={!changed || pending}
-              onClick={() => setValue(String(cost))}
+              onClick={() => setValue(cost)}
             >
               Descartar
             </Button>

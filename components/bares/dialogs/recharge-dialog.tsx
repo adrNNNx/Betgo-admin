@@ -16,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
+import { NumberInput } from "@/components/ui/number-input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 
@@ -79,12 +79,10 @@ export function RechargeDialog({
 
         <div className="grid gap-2">
           <Label htmlFor="amount">Monto a recargar (PYG)</Label>
-          <Input
+          <NumberInput
             id="amount"
-            type="number"
-            min={0}
-            value={amount || ""}
-            onChange={(e) => setAmount(Number(e.target.value) || 0)}
+            value={amount || null}
+            onValueChange={(v) => setAmount(v ?? 0)}
             placeholder="0"
             className="tabular-nums"
           />

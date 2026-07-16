@@ -83,6 +83,14 @@ export async function getBars(): Promise<Bar[]> {
   // Una sola pasada por /symbols y agrupamos por barId, en vez de N llamadas a
   // /symbols/bar/:id. Sólo nos quedamos con los locales (barId != null) activos:
   // los globales (jackpot/pozo) se administran aparte, no en el config por bar.
+  //
+  // ponytail: traemos TODOS los bares y TODOS los símbolos; la tabla y la grilla
+  // paginan en el cliente. Techo: ~200-300 bares (a ~10 símbolos/bar, /symbols
+  // pesa ~1MB y revienta antes que la lista de bares, que a 1000 bares son ~500KB).
+  // Al cruzar ese umbral, en este orden: (1) símbolos del bar seleccionado
+  // (GET /symbols?barId=), (2) endpoint propio de tabla paginado
+  // (GET /bars/admin/table). NO paginar GET /bars: el rail de símbolos, mozos,
+  // premios y transacciones necesitan la lista completa.
   const [barsRes, symbolsRes] = await Promise.all([
     apiFetch("/bars?includeInactive=true"),
     apiFetch("/symbols"),
