@@ -1,0 +1,30 @@
+version: '3.8'
+
+# Uso:
+#   Levantar:   docker-compose up -d --build
+#   Ver logs:   docker-compose logs -f admin
+#   Detener:    docker-compose down
+#
+# Requisito: la red betgo_network y el contenedor betgo_backend deben estar
+# corriendo (ver infra/docker-compose.yml y betgo-backend/docker-compose.yml)
+
+services:
+  admin:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: betgo_admin
+    restart: unless-stopped
+    env_file: .env.local
+    environment:
+      # Dentro de la red los contenedores se resuelven por nombre, así que el
+      # localhost del .env.local no sirve acá.
+      BACKEND_URL: http://betgo_backend:3000/api
+    ports:
+      - "3001:3001"
+    networks:
+      - betgo_network
+
+networks:
+  betgo_network:
+    external: true
