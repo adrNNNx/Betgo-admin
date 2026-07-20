@@ -6,6 +6,7 @@ import {
   Gift,
   ArrowLeftRight,
   Trophy,
+  GalleryHorizontalEnd,
   type LucideIcon,
 } from "lucide-react"
 
@@ -38,6 +39,7 @@ export const navigation: NavGroup[] = [
       { title: "Mesas", url: "/mesas", icon: Grid2x2 },
       { title: "Mozos", url: "/mozos", icon: Users },
       { title: "Premios", url: "/premios", icon: Gift },
+      { title: "Banners", url: "/banners", icon: GalleryHorizontalEnd },
       { title: "Transacciones", url: "/transacciones", icon: ArrowLeftRight },
       { title: "Pozo", url: "/pozo", icon: Trophy },
     ],
