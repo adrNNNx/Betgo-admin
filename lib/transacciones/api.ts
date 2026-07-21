@@ -52,6 +52,7 @@ const CATEGORY_PARAM: Record<string, string> = {
   recharge: "recharge",
   prize: "prize",
   revenue: "platform",
+  allocation: "allocation",
   adjust: "adjustment",
 }
 

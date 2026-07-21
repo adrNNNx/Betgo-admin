@@ -9,6 +9,7 @@ export const CATEGORY_FILTERS: {
   { value: "recharge", label: "Recargas" },
   { value: "prize", label: "Premios" },
   { value: "revenue", label: "Ingreso empresa" },
+  { value: "allocation", label: "Saldo mozo" },
   { value: "adjust", label: "Ajustes" },
 ]
 

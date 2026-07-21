@@ -27,8 +27,9 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { StaffTable } from "@/components/staff/staff-table"
 import { StaffFormDialog } from "@/components/staff/dialogs/staff-form-dialog"
 import { SuspendStaffDialog } from "@/components/staff/dialogs/suspend-staff-dialog"
+import { StaffBalanceDialog } from "@/components/staff/dialogs/staff-balance-dialog"
 
-export type StaffDialogKind = "create" | "edit" | "suspend"
+export type StaffDialogKind = "create" | "edit" | "suspend" | "balance"
 
 type DialogState = { kind: StaffDialogKind | null; member: StaffMember | null }
 
@@ -219,6 +220,12 @@ export function StaffManager({
       />
       <SuspendStaffDialog
         open={dialog.kind === "suspend"}
+        member={dialog.member}
+        onClose={close}
+        onChanged={onChanged}
+      />
+      <StaffBalanceDialog
+        open={dialog.kind === "balance"}
         member={dialog.member}
         onClose={close}
         onChanged={onChanged}

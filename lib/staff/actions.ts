@@ -38,6 +38,32 @@ export async function fetchStaff(
   return getStaffPage(q, limit, offset)
 }
 
+/**
+ * Asigna saldo del bar al mozo (POST /staff/:id/recharge). El backend valida
+ * que no supere el saldo del bar.
+ */
+export async function rechargeStaffBalance(
+  staffId: string,
+  amount: number,
+  notes?: string
+) {
+  await send(`/staff/${staffId}/recharge`, jsonInit("POST", { amount, notes }))
+  revalidatePath("/mozos")
+}
+
+/**
+ * Devuelve saldo del mozo al bar (POST /staff/:id/return). El backend valida
+ * que no supere el saldo del mozo.
+ */
+export async function returnStaffBalance(
+  staffId: string,
+  amount: number,
+  notes?: string
+) {
+  await send(`/staff/${staffId}/return`, jsonInit("POST", { amount, notes }))
+  revalidatePath("/mozos")
+}
+
 export type StaffFormInput = {
   id?: string
   name: string

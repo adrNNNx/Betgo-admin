@@ -7,6 +7,7 @@ import type { StaffDialogKind } from "@/components/staff/staff-manager"
 import { STAFF_PAGE_SIZE } from "@/config/staff"
 import { initials, avatarColor } from "@/lib/staff/identifier"
 import { identifierKind, IDENTIFIER_META } from "@/lib/staff/identifier"
+import { formatGs } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -71,6 +72,7 @@ export function StaffTable({
               <TableHead>Miembro</TableHead>
               <TableHead>Identificador</TableHead>
               <TableHead>Bar asignado</TableHead>
+              <TableHead>Saldo</TableHead>
               <TableHead>Rol</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
@@ -107,6 +109,13 @@ export function StaffTable({
                   </span>
                 ) : (
                   <span className="text-sm text-muted-foreground">Sin asignar</span>
+                )}
+              </TableCell>
+              <TableCell className="tabular-nums">
+                {member.barId ? (
+                  <span className="font-medium">{formatGs(member.balance)}</span>
+                ) : (
+                  <span className="text-sm text-muted-foreground">—</span>
                 )}
               </TableCell>
               <TableCell>

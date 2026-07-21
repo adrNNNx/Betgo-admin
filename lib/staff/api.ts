@@ -17,8 +17,9 @@ type RawStaff = {
   role: string
   isActive: boolean
   status: StaffStatus
+  balance: number | string
   barId: string | null
-  bar?: { id: string; name: string } | null
+  bar?: { id: string; name: string; balance: number | string } | null
   user?: {
     id: string
     name: string | null
@@ -50,6 +51,8 @@ function toMember(r: RawStaff): StaffMember {
     // El backend expone `status` (active/inactive/suspended); caemos a isActive
     // solo por defensa si viniera algo inesperado.
     status: STATUSES.includes(r.status) ? r.status : r.isActive ? "active" : "inactive",
+    balance: Number(r.balance) || 0,
+    barBalance: r.bar ? Number(r.bar.balance) || 0 : null,
   }
 }
 

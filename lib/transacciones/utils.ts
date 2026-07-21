@@ -28,6 +28,9 @@ export function categoryOf(type: TransactionType): TransactionCategory {
       return "prize"
     case "platform_revenue":
       return "revenue"
+    case "staff_allocation":
+    case "staff_return":
+      return "allocation"
     case "adjustment":
       return "adjust"
   }
@@ -67,6 +70,13 @@ export const CATEGORY_META: Record<TransactionCategory, CategoryMeta> = {
     badgeClass:
       "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400",
     sign: 1,
+  },
+  allocation: {
+    label: "Saldo mozo",
+    icon: Wallet,
+    badgeClass:
+      "bg-slate-100 text-slate-700 dark:bg-slate-800/60 dark:text-slate-300",
+    sign: 0,
   },
   adjust: {
     label: "Ajuste",

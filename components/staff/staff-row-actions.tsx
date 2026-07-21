@@ -9,6 +9,7 @@ import {
   Pause,
   Ban,
   RotateCcw,
+  Wallet,
 } from "lucide-react"
 
 import type { StaffMember } from "@/lib/staff/types"
@@ -72,6 +73,10 @@ export function StaffRowActions({
         >
           <Copy />
           Copiar identificador
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onAction("balance", member)}>
+          <Wallet />
+          Recargar saldo
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />

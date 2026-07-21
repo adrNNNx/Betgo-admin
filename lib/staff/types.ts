@@ -16,6 +16,10 @@ export type StaffMember = {
   barName: string | null
   role: StaffRole
   status: StaffStatus
+  /** Saldo/float asignado al mozo (el que puede cargar a usuarios). */
+  balance: number
+  /** Saldo disponible del bar asignado (tope para asignarle saldo). null = sin bar. */
+  barBalance: number | null
   /** ISO date — opcional, para futuras columnas (último acceso, alta…). */
   createdAt?: string
   lastActiveAt?: string | null

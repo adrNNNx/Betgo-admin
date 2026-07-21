@@ -10,6 +10,8 @@ export type TransactionType =
   | "prize_jackpot"
   | "bar_recharge"
   | "platform_revenue"
+  | "staff_allocation"
+  | "staff_return"
   | "adjustment"
 
 /** Agrupación legible para badges y filtros. */
@@ -18,6 +20,7 @@ export type TransactionCategory =
   | "recharge"
   | "prize"
   | "revenue"
+  | "allocation"
   | "adjust"
 
 export type Transaction = {
