@@ -1,7 +1,6 @@
 import {
   LayoutDashboard,
   Store,
-  Grid2x2,
   Users,
   Gift,
   ArrowLeftRight,
@@ -36,7 +35,6 @@ export const navigation: NavGroup[] = [
     items: [
       { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
       { title: "Bares", url: "/bares", icon: Store },
-      { title: "Mesas", url: "/mesas", icon: Grid2x2 },
       { title: "Mozos", url: "/mozos", icon: Users },
       { title: "Premios", url: "/premios", icon: Gift },
       { title: "Banners", url: "/banners", icon: GalleryHorizontalEnd },

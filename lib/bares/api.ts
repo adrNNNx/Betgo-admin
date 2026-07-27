@@ -68,8 +68,15 @@ export type PlatformKpis = {
 
 // KPIs derivados del ledger (GET /bars/admin/kpis). Sin rango = acumulado
 // histórico. Si falla, devolvemos ceros para no romper la página de bares.
-export async function getPlatformKpis(): Promise<PlatformKpis> {
-  const res = await apiFetch("/bars/admin/kpis")
+export async function getPlatformKpis(range?: {
+  from?: string
+  to?: string
+}): Promise<PlatformKpis> {
+  const qs = new URLSearchParams()
+  if (range?.from) qs.set("from", range.from)
+  if (range?.to) qs.set("to", range.to)
+  const suffix = qs.toString() ? `?${qs}` : ""
+  const res = await apiFetch(`/bars/admin/kpis${suffix}`)
   if (!res.ok) {
     return { totalPlatformEarnings: 0, totalPoolCollected: 0, bars: [] }
   }
