@@ -26,18 +26,26 @@ type RawSymbol = {
   name: string
   imageUrl: string
   weight: number
+  minMatchToWin?: number | string
+  isJackpot?: boolean
   barId: string | null
   prizeId: string | null
   isActive: boolean
+  prize?: { id: string; name: string } | null
 }
 
 function toSymbol(s: RawSymbol): BarSymbol {
+  const min = Number(s.minMatchToWin)
   return {
     id: s.id,
     name: s.name,
     emoji: s.imageUrl,
     weight: s.weight,
+    // Cualquier valor fuera de 3/4 cae a 5 (sólo con los cinco).
+    minMatch: min === 3 || min === 4 ? min : 5,
     hasPrize: s.prizeId !== null,
+    prizeName: s.prize?.name ?? null,
+    isJackpot: s.isJackpot === true,
   }
 }
 
@@ -83,13 +91,24 @@ export async function getPlatformKpis(range?: {
   return (await res.json()) as PlatformKpis
 }
 
-export async function getBars(): Promise<Bar[]> {
+export type BarsWithReel = {
+  bars: Bar[]
+  /**
+   * Símbolos globales activos. Están en la máquina de TODOS los bares: el motor
+   * arma la tirada con `barId IS NULL OR barId = :bar`. Hacen falta acá para que
+   * la probabilidad de un símbolo del bar salga sobre el total real de la
+   * máquina y no sólo sobre los propios (que la infla muchísimo).
+   */
+  globalSymbols: BarSymbol[]
+}
+
+/** Bares + los símbolos globales que comparten. Una sola pasada por /symbols. */
+export async function getBarsWithReel(): Promise<BarsWithReel> {
   // includeInactive=true → traemos activos y desactivados; el estado se gestiona
   // (activar/desactivar) desde la tabla, no se borra nada.
   //
-  // Una sola pasada por /symbols y agrupamos por barId, en vez de N llamadas a
-  // /symbols/bar/:id. Sólo nos quedamos con los locales (barId != null) activos:
-  // los globales (jackpot/pozo) se administran aparte, no en el config por bar.
+  // Una sola pasada por /symbols: agrupamos los locales por barId y apartamos
+  // los globales, en vez de N llamadas a /symbols/bar/:id.
   //
   // ponytail: traemos TODOS los bares y TODOS los símbolos; la tabla y la grilla
   // paginan en el cliente. Techo: ~200-300 bares (a ~10 símbolos/bar, /symbols
@@ -110,12 +129,25 @@ export async function getBars(): Promise<Bar[]> {
     : []
 
   const byBar = new Map<string, BarSymbol[]>()
+  const globalSymbols: BarSymbol[] = []
   for (const s of rawSymbols) {
-    if (!s.barId || !s.isActive) continue
+    if (!s.isActive) continue
+    if (!s.barId) {
+      globalSymbols.push(toSymbol(s))
+      continue
+    }
     const list = byBar.get(s.barId) ?? []
     list.push(toSymbol(s))
     byBar.set(s.barId, list)
   }
 
-  return rawBars.map((b) => toBar(b, byBar.get(b.id) ?? []))
+  return {
+    bars: rawBars.map((b) => toBar(b, byBar.get(b.id) ?? [])),
+    globalSymbols,
+  }
+}
+
+/** Sólo los bares. Los módulos que no configuran la máquina usan esto. */
+export async function getBars(): Promise<Bar[]> {
+  return (await getBarsWithReel()).bars
 }

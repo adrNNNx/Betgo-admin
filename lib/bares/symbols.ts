@@ -19,12 +19,18 @@ export function totalWeight(symbols: BarSymbol[]): number {
 }
 
 /**
- * Anota cada símbolo con su probabilidad real de salir en un rodillo:
- * peso del símbolo / suma de todos los pesos. El peso por sí solo no significa
- * nada; sólo importa relativo al total, por eso lo exponemos como %.
+ * Anota cada símbolo con su probabilidad real de salir en un carril.
+ *
+ * `extraWeight` es el peso de los símbolos globales, que están en la máquina de
+ * todos los bares (el motor arma la tirada con `barId IS NULL OR barId = :bar`).
+ * Sin eso el porcentaje sale calculado sólo sobre los símbolos propios y queda
+ * inflado: un bar con dos símbolos vería 81% donde la realidad es 28%.
  */
-export function withProbabilities(symbols: BarSymbol[]): SymbolWithProbability[] {
-  const total = totalWeight(symbols) || 1
+export function withProbabilities(
+  symbols: BarSymbol[],
+  extraWeight = 0
+): SymbolWithProbability[] {
+  const total = totalWeight(symbols) + extraWeight || 1
   return symbols.map((s) => ({ ...s, probability: (s.weight / total) * 100 }))
 }
 

@@ -1,11 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { Plus } from "lucide-react"
 
 import type { Prize, Scope, SlotSymbol } from "@/lib/premios/types"
 import { symbolsForPrize } from "@/lib/premios/helpers"
-import { Button } from "@/components/ui/button"
 import {
   Card,
   CardDescription,
@@ -66,10 +64,6 @@ export function PremiosManager({ scopes }: { scopes: Scope[] }) {
             los símbolos que los otorgan.
           </p>
         </div>
-        <Button className="ml-auto" onClick={openCreate}>
-          <Plus />
-          Nuevo premio
-        </Button>
       </div>
 
       <Card className="overflow-hidden py-0">

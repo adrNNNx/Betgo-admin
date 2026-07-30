@@ -96,6 +96,16 @@ export async function setFreePlays(barId: string, value: number) {
   revalidatePath("/bares")
 }
 
+/**
+ * Desde cuántos iguales paga un símbolo del bar (PATCH /symbols/:id).
+ * Aplica a las jugadas gratis y pagas de ese bar; el premio lo define el
+ * símbolo, igual que en el pozo global.
+ */
+export async function setBarSymbolMinMatch(symbolId: string, value: 3 | 4 | 5) {
+  await send(`/symbols/${symbolId}`, jsonInit("PATCH", { minMatchToWin: value }))
+  revalidatePath("/bares")
+}
+
 export async function setBarImage(barId: string, formData: FormData) {
   const file = formData.get("file")
   if (!(file instanceof File) || file.size === 0) {

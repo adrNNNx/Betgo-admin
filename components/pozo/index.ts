@@ -15,4 +15,5 @@ export type {
   MovementType,
   GlobalSymbol,
   AdjustDirection,
+  MatchLevel,
 } from "@/lib/pozo/types"

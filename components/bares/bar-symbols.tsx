@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState, useTransition } from "react"
 import {
   ChevronLeft,
   ChevronRight,
@@ -21,6 +21,14 @@ import {
   withProbabilities,
   type SymbolWithProbability,
 } from "@/lib/bares/symbols"
+import {
+  combinedSpinsPerWin,
+  formatOdds,
+  oddsLevel,
+  spinsPerWin,
+} from "@/lib/pozo/odds"
+import { setBarSymbolMinMatch } from "@/lib/bares/actions"
+import { withToast } from "@/lib/run-action"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -69,7 +77,18 @@ function barInitials(name: string): string {
   return (a + b).toUpperCase()
 }
 
-const LIST_COLS = "minmax(130px,1.4fr) 56px minmax(108px,1.3fr) 96px 66px"
+const LIST_COLS =
+  "minmax(130px,1.4fr) 56px minmax(100px,1.1fr) 112px minmax(96px,1fr) 96px 66px"
+
+const MATCH_OPTIONS = [3, 4, 5] as const
+
+/** Color del aviso de frecuencia: igual criterio que en el pozo. */
+const ODDS_CLASS: Record<ReturnType<typeof oddsLevel>, string> = {
+  extremo: "text-red-600 dark:text-red-400",
+  alto: "text-amber-600 dark:text-amber-500",
+  normal: "text-muted-foreground",
+  raro: "text-muted-foreground",
+}
 
 /**
  * Configuración de símbolos de la máquina tragaperras, por bar — layout
@@ -84,10 +103,12 @@ const LIST_COLS = "minmax(130px,1.4fr) 56px minmax(108px,1.3fr) 96px 66px"
  */
 export function BarSymbols({
   bars,
+  globalSymbols,
   activeBarId,
   onActiveBarChange,
 }: {
   bars: Bar[]
+  globalSymbols: BarSymbol[]
   activeBarId: string
   onActiveBarChange: (barId: string) => void
 }) {
@@ -101,6 +122,7 @@ export function BarSymbols({
     symbol: null,
   })
   const [deleting, setDeleting] = useState<BarSymbol | null>(null)
+  const [pending, startTransition] = useTransition()
 
   const activeBarRef = useRef<HTMLButtonElement>(null)
 
@@ -128,10 +150,14 @@ export function BarSymbols({
       )
   }, [bars, barQuery])
 
+  // Los globales están en la máquina de todos los bares, así que su peso entra
+  // en el denominador de la probabilidad aunque se administren en el Pozo.
+  const globalWeight = useMemo(() => totalWeight(globalSymbols), [globalSymbols])
+
   const symbols = useMemo<SymbolWithProbability[]>(() => {
     if (!bar) return []
     const q = symQuery.trim().toLowerCase()
-    let list = withProbabilities(bar.symbols)
+    let list = withProbabilities(bar.symbols, globalWeight)
     if (q) list = list.filter((s) => s.name.toLowerCase().includes(q))
     return [...list].sort((a, b) => {
       switch (sort) {
@@ -145,7 +171,7 @@ export function BarSymbols({
           return b.weight - a.weight
       }
     })
-  }, [bar, symQuery, sort])
+  }, [bar, symQuery, sort, globalWeight])
 
   if (!bar) {
     return (
@@ -161,8 +187,19 @@ export function BarSymbols({
   }
 
   const barIndex = bars.findIndex((b) => b.id === bar.id)
-  const total = totalWeight(bar.symbols)
+  const ownWeight = totalWeight(bar.symbols)
+  // Peso real de la máquina: propios + globales.
+  const total = ownWeight + globalWeight
   const withPrize = bar.symbols.filter((s) => s.hasPrize).length
+
+  // Cada cuánto paga algo la máquina del bar, contando ambos grupos: sólo pagan
+  // los símbolos con premio, y cada uno desde su propio umbral.
+  const reel = [...bar.symbols, ...globalSymbols].map((s) => ({
+    weight: s.weight,
+    minMatch: s.minMatch,
+    pays: s.hasPrize,
+  }))
+  const combined = combinedSpinsPerWin(reel)
 
   const pageCount = Math.max(1, Math.ceil(symbols.length / SYMBOLS_PAGE_SIZE))
   const pageSymbols = symbols.slice(
@@ -174,14 +211,27 @@ export function BarSymbols({
 
   const onEdit = (symbol: BarSymbol) => setDialog({ open: true, symbol })
   const onDelete = (symbol: BarSymbol) => setDeleting(symbol)
+  const onMinMatch = (symbol: BarSymbol, value: 3 | 4 | 5) => {
+    if (value === symbol.minMatch) return
+    startTransition(() => {
+      withToast(
+        () => setBarSymbolMinMatch(symbol.id, value),
+        value === 5
+          ? `${symbol.name} paga sólo con los 5`
+          : `${symbol.name} paga desde ${value} iguales`
+      )
+    })
+  }
 
   return (
     <Card className="overflow-hidden py-0">
       <CardHeader className="gap-1 border-b py-5">
         <CardTitle>Configuración de símbolos</CardTitle>
         <CardDescription>
-          Elige un bar y administra los símbolos de su tragamonedas. La probabilidad se
-          calcula con el peso de cada símbolo sobre el total.
+          Elige un bar y administra los símbolos de su tragamonedas. Cada símbolo
+          define desde cuántos carriles iguales paga su premio; la probabilidad y
+          la frecuencia se calculan sobre la máquina completa, contando también
+          los símbolos globales.
         </CardDescription>
       </CardHeader>
 
@@ -250,13 +300,49 @@ export function BarSymbols({
               <span className="truncate font-semibold">{bar.name}</span>
             </div>
             <div className="ml-auto flex flex-wrap gap-2">
-              <StatPill dotClass="bg-slate-500" value={bar.symbols.length} label="símbolos" />
+              <StatPill dotClass="bg-slate-500" value={bar.symbols.length} label="propios" />
+              <StatPill dotClass="bg-blue-500" value={globalSymbols.length} label="globales" />
               <StatPill dotClass="bg-emerald-500" value={withPrize} label="con premio" />
               <span className="flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs text-muted-foreground">
-                peso total <strong className="font-semibold tabular-nums text-foreground">{total}</strong>
+                peso de la máquina{" "}
+                <strong className="font-semibold tabular-nums text-foreground">
+                  {total}
+                </strong>
+              </span>
+              <span
+                className={cn(
+                  "flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs text-muted-foreground",
+                  ODDS_CLASS[oddsLevel(combined)]
+                )}
+              >
+                paga{" "}
+                <strong className="font-semibold tabular-nums">
+                  {formatOdds(combined)}
+                </strong>
               </span>
             </div>
           </div>
+
+          {/* Los globales no se editan acá, pero están en la tirada: sin esto el
+              admin no entiende por qué su símbolo de peso 43 es 28% y no 81%. */}
+          <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 border-b bg-secondary/40 px-5 py-2.5 text-[11.5px] text-muted-foreground">
+            <span>
+              La máquina de este bar también tira los{" "}
+              <strong className="text-foreground">
+                {globalSymbols.length} símbolos globales
+              </strong>{" "}
+              (peso {globalWeight}), que se configuran en Pozo global:
+            </span>
+            {globalSymbols.map((s) => (
+              <span
+                key={s.id}
+                className="rounded-full border bg-background px-1.5 py-px font-medium"
+                title={`Peso ${s.weight} · paga desde ${s.minMatch}`}
+              >
+                {s.name}
+              </span>
+            ))}
+          </p>
 
           {/* toolbar */}
           <div className="flex flex-wrap items-center gap-2.5 border-b px-5 py-3">
@@ -314,7 +400,15 @@ export function BarSymbols({
             ) : view === "grid" ? (
               <div className="grid grid-cols-[repeat(auto-fill,minmax(168px,1fr))] gap-3.5">
                 {pageSymbols.map((s) => (
-                  <SymbolCard key={s.id} symbol={s} onEdit={onEdit} onDelete={onDelete} />
+                  <SymbolCard
+                    key={s.id}
+                    symbol={s}
+                    total={total}
+                    pending={pending}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    onMinMatch={onMinMatch}
+                  />
                 ))}
                 {page === pageCount - 1 && (
                   <button
@@ -328,7 +422,7 @@ export function BarSymbols({
                 )}
               </div>
             ) : (
-              <div className="flex min-w-[470px] flex-col">
+              <div className="flex min-w-[720px] flex-col">
                 <div
                   className="grid items-center gap-3 border-b px-1 py-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
                   style={{ gridTemplateColumns: LIST_COLS }}
@@ -336,11 +430,21 @@ export function BarSymbols({
                   <span className="truncate">Símbolo</span>
                   <span>Peso</span>
                   <span>Probabilidad</span>
+                  <span>Paga desde</span>
+                  <span>Frecuencia</span>
                   <span>Premio</span>
                   <span className="text-right">Acciones</span>
                 </div>
                 {pageSymbols.map((s) => (
-                  <SymbolRow key={s.id} symbol={s} onEdit={onEdit} onDelete={onDelete} />
+                  <SymbolRow
+                    key={s.id}
+                    symbol={s}
+                    total={total}
+                    pending={pending}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    onMinMatch={onMinMatch}
+                  />
                 ))}
               </div>
             )}
@@ -507,14 +611,84 @@ function RowActions({
   )
 }
 
+/** Selector compacto de "desde cuántos iguales paga". */
+function MatchPicker({
+  symbol,
+  pending,
+  onMinMatch,
+}: {
+  symbol: BarSymbol
+  pending: boolean
+  onMinMatch: (s: BarSymbol, v: 3 | 4 | 5) => void
+}) {
+  return (
+    <ToggleGroup
+      type="single"
+      size="sm"
+      variant="outline"
+      value={String(symbol.minMatch)}
+      onValueChange={(v) => v && onMinMatch(symbol, Number(v) as 3 | 4 | 5)}
+      disabled={pending}
+    >
+      {MATCH_OPTIONS.map((n) => (
+        <ToggleGroupItem
+          key={n}
+          value={String(n)}
+          className="h-7 w-8 text-xs"
+          aria-label={`Paga desde ${n} iguales`}
+        >
+          {n}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
+  )
+}
+
+/** Cada cuánto paga este símbolo, o por qué no paga. */
+function OddsLabel({
+  symbol,
+  total,
+  className,
+}: {
+  symbol: BarSymbol
+  total: number
+  className?: string
+}) {
+  if (!symbol.hasPrize) {
+    return (
+      <span className={cn("text-[11px] text-muted-foreground", className)}>
+        sin premio, no paga
+      </span>
+    )
+  }
+  const spins = spinsPerWin(symbol.weight, total, symbol.minMatch)
+  return (
+    <span
+      className={cn(
+        "text-[11px] font-medium tabular-nums",
+        ODDS_CLASS[oddsLevel(spins)],
+        className
+      )}
+    >
+      {formatOdds(spins)}
+    </span>
+  )
+}
+
 function SymbolCard({
   symbol,
+  total,
+  pending,
   onEdit,
   onDelete,
+  onMinMatch,
 }: {
   symbol: SymbolWithProbability
+  total: number
+  pending: boolean
   onEdit: (s: BarSymbol) => void
   onDelete: (s: BarSymbol) => void
+  onMinMatch: (s: BarSymbol, v: 3 | 4 | 5) => void
 }) {
   return (
     <div className="group relative flex flex-col items-center gap-2 rounded-lg border p-5 transition-shadow hover:shadow-sm">
@@ -532,6 +706,15 @@ function SymbolCard({
         </div>
         <ProbBar value={symbol.probability} className="mt-1.5" />
       </div>
+
+      <div className="mt-0.5 flex w-full items-center justify-between gap-2">
+        <span className="text-[11px] font-medium text-muted-foreground">
+          Paga desde
+        </span>
+        <MatchPicker symbol={symbol} pending={pending} onMinMatch={onMinMatch} />
+      </div>
+      <OddsLabel symbol={symbol} total={total} />
+
       {symbol.hasPrize && <PrizeBadge />}
     </div>
   )
@@ -539,12 +722,18 @@ function SymbolCard({
 
 function SymbolRow({
   symbol,
+  total,
+  pending,
   onEdit,
   onDelete,
+  onMinMatch,
 }: {
   symbol: SymbolWithProbability
+  total: number
+  pending: boolean
   onEdit: (s: BarSymbol) => void
   onDelete: (s: BarSymbol) => void
+  onMinMatch: (s: BarSymbol, v: 3 | 4 | 5) => void
 }) {
   return (
     <div
@@ -564,6 +753,10 @@ function SymbolRow({
           {formatProbability(symbol.probability)}
         </span>
       </span>
+      <span>
+        <MatchPicker symbol={symbol} pending={pending} onMinMatch={onMinMatch} />
+      </span>
+      <OddsLabel symbol={symbol} total={total} />
       <span>{symbol.hasPrize ? <PrizeBadge /> : <span className="text-muted-foreground">—</span>}</span>
       <span className="flex justify-end gap-1">
         <RowActions symbol={symbol} onEdit={onEdit} onDelete={onDelete} />

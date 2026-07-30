@@ -3,6 +3,7 @@ import "server-only"
 import { apiFetch } from "@/lib/session"
 import type {
   GlobalSymbol,
+  MatchLevel,
   MovementType,
   PoolMovement,
   PoolState,
@@ -25,6 +26,12 @@ type RawPool = {
   totalCollected?: number | string
   totalPaid?: number | string
   updatedAt?: string
+}
+
+/** Normaliza el umbral a 3/4/5; cualquier otra cosa cae a 5. */
+function toMatchLevel(v: unknown): MatchLevel {
+  const n = Number(v)
+  return n === 3 || n === 4 ? n : 5
 }
 
 /**
@@ -124,10 +131,12 @@ type RawSymbol = {
   name: string
   imageUrl: string
   weight: number
+  minMatchToWin?: number | string
+  isJackpot?: boolean
   barId: string | null
   prizeId: string | null
   isActive: boolean
-  /** Premio incluido por el backend (join). Solo jackpot cuenta para el pozo. */
+  /** Premio incluido por el backend (join). */
   prize?: { id: string; name: string; type: "local" | "jackpot" } | null
 }
 
@@ -146,6 +155,8 @@ export async function getGlobalSymbols(): Promise<GlobalSymbol[]> {
         emoji: img ? "🎰" : s.imageUrl,
         imageUrl: img ? s.imageUrl : null,
         weight: s.weight,
+        minMatch: toMatchLevel(s.minMatchToWin),
+        isJackpot: s.isJackpot === true,
         // "Con premio" = el prizeId resuelve a un premio existente (cualquiera
         // del pozo). El join `prize` es null si el premio fue borrado (prizeId
         // colgado); así coincide con lo que muestra el módulo Premios.

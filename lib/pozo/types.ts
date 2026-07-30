@@ -28,6 +28,16 @@ export type GlobalSymbol = {
   imageUrl?: string | null
   /** Peso relativo. Probabilidad = weight / suma(weights). */
   weight: number
+  /**
+   * Desde cuántos carriles iguales este símbolo paga su premio.
+   * 3 o 4 = premio menor (físico, lo entrega el bar); 5 = sólo con los cinco.
+   */
+  minMatch: MatchLevel
+  /**
+   * Si al alinear los 5 entrega el POZO GLOBAL. Lo elige el admin: el pozo es
+   * plata compartida, así que no se deriva de nada.
+   */
+  isJackpot: boolean
   /** Si al alinearse otorga un premio del pozo. */
   hasPrize: boolean
   /** Premio asignado (backend: symbol.prizeId). null = sin asignar. */
@@ -35,6 +45,9 @@ export type GlobalSymbol = {
   /** Nombre del premio asignado, para mostrarlo sin re-buscar. */
   prizeName: string | null
 }
+
+/** Desde cuántos carriles iguales paga un símbolo. */
+export type MatchLevel = 3 | 4 | 5
 
 export type PoolState = {
   /** Saldo vigente del pozo global (PYG). */

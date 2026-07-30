@@ -81,6 +81,31 @@ export async function setCostPerSpin(cost: number) {
 }
 
 /**
+ * Desde cuántos iguales paga este símbolo (PATCH /symbols/:id).
+ * 3 o 4 = premio menor; 5 = sólo con los cinco carriles.
+ */
+export async function setSymbolMinMatch(symbolId: string, value: 3 | 4 | 5) {
+  await send(`/symbols/${symbolId}`, jsonInit("PATCH", { minMatchToWin: value }))
+  revalidatePath("/pozo")
+}
+
+/**
+ * Marca (o desmarca) al símbolo que entrega el pozo global (PATCH /symbols/:id).
+ *
+ * Al activarlo van los tres campos juntos porque el backend valida el estado
+ * final: un símbolo que entrega el pozo no puede tener premio propio y siempre
+ * exige los 5. Mandar sólo el flag sobre un símbolo con premio da 400, así que
+ * el premio se limpia en la misma llamada (el diálogo lo avisa antes).
+ */
+export async function setSymbolJackpot(symbolId: string, isJackpot: boolean) {
+  const body = isJackpot
+    ? { isJackpot: true, prizeId: null, minMatchToWin: 5 }
+    : { isJackpot: false }
+  await send(`/symbols/${symbolId}`, jsonInit("PATCH", body))
+  revalidatePath("/pozo")
+}
+
+/**
  * Alta / edición de un símbolo del pozo global (vía /symbols, barId = null →
  * el backend lo marca como global/jackpot). La imagen propia es lo principal;
  * el emoji es el fallback. Mismo patrón que los símbolos de bares.

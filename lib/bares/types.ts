@@ -16,7 +16,16 @@ export type BarSymbol = {
   emoji: string
   /** peso/probabilidad relativa en la máquina */
   weight: number
+  /**
+   * Desde cuántos carriles iguales este símbolo paga su premio (3, 4 o 5).
+   * 5 = sólo con los cinco, que es la conducta histórica.
+   */
+  minMatch: 3 | 4 | 5
   hasPrize: boolean
+  /** Nombre del premio asignado, para mostrarlo sin re-buscar. */
+  prizeName: string | null
+  /** Si entrega el pozo global. Sólo los símbolos globales pueden. */
+  isJackpot: boolean
 }
 
 export type Bar = {
