@@ -4,11 +4,13 @@ import { revalidatePath } from "next/cache"
 
 import { apiFetch } from "@/lib/session"
 import {
+  getMajorClaims,
   getMovementsPage,
+  type MajorClaimsPage,
   type MovementCategory,
   type MovementsPage,
 } from "@/lib/pozo/api"
-import type { AdjustDirection } from "@/lib/pozo/types"
+import type { AdjustDirection, ClaimStatus } from "@/lib/pozo/types"
 
 /** Llama al backend; tira con el mensaje del backend si falla. */
 async function send(path: string, init: RequestInit): Promise<Response> {
@@ -77,6 +79,31 @@ export async function fetchMovements(params: {
 /** Costo por tirada del pozo (PATCH /global-pool/:id { costPerPlay }). */
 export async function setCostPerSpin(cost: number) {
   await send("/global-pool/1", jsonInit("PATCH", { costPerPlay: cost }))
+  revalidatePath("/pozo")
+}
+
+/** Trae una página de premios mayores (para los filtros del cliente). */
+export async function fetchMajorClaims(params: {
+  status: ClaimStatus
+  barId?: string
+  limit: number
+  offset: number
+}): Promise<MajorClaimsPage> {
+  return getMajorClaims(params)
+}
+
+/**
+ * Entrega un premio mayor (POST /prize-claims/major/deliver).
+ *
+ * IRREVERSIBLE: no hay endpoint para deshacerla. El claim queda `delivered` y
+ * el stock del premio baja. Los errores del backend (ya entregado, vencido,
+ * premio local, admin sin perfil de staff) suben tal cual para mostrarlos.
+ */
+export async function deliverMajorPrize(code: string, notes?: string) {
+  await send(
+    "/prize-claims/major/deliver",
+    jsonInit("POST", { code, notes: notes?.trim() || undefined })
+  )
   revalidatePath("/pozo")
 }
 

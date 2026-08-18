@@ -1,10 +1,22 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { UploadCloud, Globe, Store, AlertCircle } from "lucide-react"
+import { UploadCloud, Globe, Store, AlertCircle, Info, Lightbulb } from "lucide-react"
 
 import type { Banner, BannerBarRef, BannerFormValues } from "@/lib/banners/types"
-import { MAX_IMAGE_MB, IMAGE_ACCEPT } from "@/config/banners"
+import {
+  MAX_IMAGE_MB,
+  IMAGE_ACCEPT,
+  BANNER_IMAGE,
+  IMAGE_POLICY,
+} from "@/config/banners"
+import {
+  analyzeImage,
+  formatWeight,
+  readImageSize,
+  type ImageWarning,
+} from "@/lib/banners/image"
+import { BannerPreview } from "@/components/banners/banner-preview"
 import {
   isoToDateInput,
   dateInputToStartIso,
@@ -62,15 +74,26 @@ export function BannerFormDialog({
 
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
+  const [warnings, setWarnings] = useState<ImageWarning[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
 
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Al cerrar, soltamos el blob del preview: el diálogo no se desmonta.
+  useEffect(() => {
+    if (open) return
+    setPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return null
+    })
+  }, [open])
+
   useEffect(() => {
     if (!open) return
     setError(null)
     setFile(null)
+    setWarnings([])
     setPreview(null)
     if (banner) {
       setTitle(banner.title)
@@ -100,15 +123,30 @@ export function BannerFormDialog({
     if (!isEdit) setDisplayOrder(defaultOrder(value))
   }
 
-  const onPick = (f: File | undefined) => {
+  /** Suelta el preview anterior antes de pisarlo, para no acumular blobs. */
+  const swapPreview = (next: string | null) => {
+    setPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return next
+    })
+  }
+
+  const onPick = async (f: File | undefined) => {
     if (!f) return
+    // El peso sí es un corte duro: el backend lo rechaza.
     if (f.size > MAX_IMAGE_MB * 1024 * 1024) {
-      setError(`La imagen supera los ${MAX_IMAGE_MB}MB.`)
+      setError(`La imagen pesa ${formatWeight(f.size)} y supera los ${MAX_IMAGE_MB}MB.`)
       return
     }
     setError(null)
     setFile(f)
-    setPreview(URL.createObjectURL(f))
+    swapPreview(URL.createObjectURL(f))
+
+    // Las medidas se leen aparte y son asíncronas; los avisos aparecen apenas
+    // están listas, sin bloquear el preview ni el guardado.
+    setWarnings([])
+    const size = await readImageSize(f)
+    setWarnings(analyzeImage(size, f.size, IMAGE_POLICY))
   }
 
   const startsIso = dateInputToStartIso(startsAt)
@@ -163,30 +201,72 @@ export function BannerFormDialog({
               <Label>
                 Imagen <span className="text-destructive">*</span>
               </Label>
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={() => inputRef.current?.click()}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault()
-                  onPick(e.dataTransfer.files?.[0])
-                }}
-                className="flex min-h-36 cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-lg border border-dashed bg-secondary p-4 text-center text-muted-foreground transition-colors hover:border-ring"
-              >
-                {preview ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={preview} alt="preview" className="max-h-32 w-auto rounded-md object-contain" />
-                ) : (
-                  <>
-                    <UploadCloud className="size-6" />
-                    <p className="text-sm font-medium text-foreground">
-                      Arrastrá una imagen o hacé clic para subir
-                    </p>
-                    <p className="text-[11px]">JPG, PNG, WEBP o GIF · máx. {MAX_IMAGE_MB}MB</p>
-                  </>
-                )}
-              </div>
+
+              {/* Las medidas van ANTES de elegir el archivo: enterarse después
+                  de subir es enterarse tarde. */}
+              <ul className="grid gap-1 rounded-lg border bg-secondary/40 p-3 text-[11.5px] leading-relaxed text-muted-foreground sm:grid-cols-2">
+                <li>
+                  <strong className="text-foreground">
+                    {BANNER_IMAGE.width} × {BANNER_IMAGE.height} px
+                  </strong>{" "}
+                  (relación {BANNER_IMAGE.ratio}:1)
+                </li>
+                <li>
+                  Menos de{" "}
+                  <strong className="text-foreground">{BANNER_IMAGE.idealKb}KB</strong>,
+                  en JPG o WebP
+                </li>
+                <li className="sm:col-span-2">
+                  Logo y texto al centro, con{" "}
+                  <strong className="text-foreground">
+                    {BANNER_IMAGE.safeArea.x}px de margen a los costados
+                  </strong>{" "}
+                  y {BANNER_IMAGE.safeArea.bottom}px abajo. El fondo sí puede
+                  llegar al borde.
+                </li>
+                <li className="sm:col-span-2">
+                  En celular se recorta a {BANNER_IMAGE.mobileRatio}:1, así que se
+                  pierde ~6% de ancho de cada lado.
+                </li>
+              </ul>
+
+              {preview ? (
+                <BannerPreview src={preview} />
+              ) : (
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => inputRef.current?.click()}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    onPick(e.dataTransfer.files?.[0])
+                  }}
+                  className="flex min-h-36 cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-lg border border-dashed bg-secondary p-4 text-center text-muted-foreground transition-colors hover:border-ring"
+                >
+                  <UploadCloud className="size-6" />
+                  <p className="text-sm font-medium text-foreground">
+                    Arrastrá una imagen o hacé clic para subir
+                  </p>
+                  <p className="text-[11px]">
+                    JPG, PNG, WEBP o GIF · máx. {MAX_IMAGE_MB}MB
+                  </p>
+                </div>
+              )}
+
+              {/* Sugerencias, no errores: el admin puede subir igual. Por eso
+                  van en ámbar y no en destructive, que sí bloquea. */}
+              {warnings.length > 0 && (
+                <ul className="grid gap-1.5 rounded-lg border border-amber-300 bg-amber-50 p-3 text-[12.5px] leading-relaxed text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+                  {warnings.map((w) => (
+                    <li key={w.id} className="flex items-start gap-2">
+                      <Lightbulb className="mt-px size-3.5 shrink-0" />
+                      <span>{w.message}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
               {preview && (
                 <button
                   type="button"
@@ -206,10 +286,27 @@ export function BannerFormDialog({
             </div>
           )}
 
+          {/* Uso interno: en la app el título es sólo texto alternativo de la
+              imagen y la descripción no se renderiza en ningún lado. */}
+          <p className="flex items-start gap-2 rounded-lg border bg-secondary/40 p-3 text-[12px] leading-relaxed text-muted-foreground sm:col-span-2">
+            <Info className="mt-px size-3.5 shrink-0" />
+            <span>
+              El título y la descripción{" "}
+              <strong className="text-foreground">
+                no se muestran en la app del cliente
+              </strong>
+              : sirven para identificar el banner acá en el panel. Todo lo que el
+              cliente tiene que leer va dentro de la imagen.
+            </span>
+          </p>
+
           {/* Título */}
           <div className="grid gap-2 sm:col-span-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="banner-title">Título</Label>
+              <Label htmlFor="banner-title">
+                Título{" "}
+                <span className="font-normal text-muted-foreground">(interno)</span>
+              </Label>
               <span
                 className={cn(
                   "text-xs tabular-nums text-muted-foreground",
@@ -231,7 +328,10 @@ export function BannerFormDialog({
           {/* Descripción */}
           <div className="grid gap-2 sm:col-span-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="banner-desc">Descripción</Label>
+              <Label htmlFor="banner-desc">
+                Descripción{" "}
+                <span className="font-normal text-muted-foreground">(interna)</span>
+              </Label>
               <span
                 className={cn(
                   "text-xs tabular-nums text-muted-foreground",
@@ -245,7 +345,7 @@ export function BannerFormDialog({
               id="banner-desc"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Texto opcional que acompaña al banner."
+              placeholder="Nota para el equipo: campaña, vigencia, quién lo pidió…"
               rows={3}
             />
           </div>

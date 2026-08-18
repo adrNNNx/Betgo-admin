@@ -2,7 +2,9 @@ import "server-only"
 
 import { apiFetch } from "@/lib/session"
 import type {
+  ClaimStatus,
   GlobalSymbol,
+  MajorClaim,
   MatchLevel,
   MovementType,
   PoolMovement,
@@ -54,6 +56,78 @@ export async function getPoolState(): Promise<PoolState> {
     }
   } catch {
     return EMPTY_POOL
+  }
+}
+
+type RawMajorClaim = {
+  id: string
+  claimCode: string
+  prize?: {
+    name?: string
+    value?: number | string | null
+    imageUrl?: string | null
+  } | null
+  user?: { name?: string | null; phone?: string | null } | null
+  // El backend devuelve `bar: null` si el claim quedó sin bar.
+  bar?: { id: string; name: string } | null
+  createdAt: string
+  expiresAt: string
+}
+
+export type MajorClaimsPage = { data: MajorClaim[]; total: number }
+
+/**
+ * Premios mayores (GET /prize-claims/major). Sin `barId` trae los de todos.
+ *
+ * Listar los pendientes tiene un efecto de lado en el backend: marca como
+ * vencidos los que pasaron su `expiresAt`. Por eso la lista es la fuente de
+ * verdad del estado, no un caché del cliente.
+ */
+export async function getMajorClaims(params: {
+  status: ClaimStatus
+  barId?: string
+  limit: number
+  offset: number
+}): Promise<MajorClaimsPage> {
+  const qs = new URLSearchParams({
+    status: params.status,
+    limit: String(params.limit),
+    offset: String(params.offset),
+  })
+  if (params.barId) qs.set("barId", params.barId)
+
+  try {
+    const res = await apiFetch(`/prize-claims/major?${qs.toString()}`)
+    if (!res.ok) return { data: [], total: 0 }
+    const json = (await res.json()) as {
+      data?: RawMajorClaim[]
+      total?: number
+    } | null
+    if (!json || !Array.isArray(json.data)) return { data: [], total: 0 }
+    return {
+      data: json.data.map(toMajorClaim),
+      total: json.total ?? json.data.length,
+    }
+  } catch {
+    return { data: [], total: 0 }
+  }
+}
+
+function toMajorClaim(r: RawMajorClaim): MajorClaim {
+  // `value` e `imageUrl` vienen null en la práctica: el monto está en el nombre.
+  const value = r.prize?.value
+  return {
+    id: r.id,
+    claimCode: r.claimCode,
+    prizeName: r.prize?.name || "Premio sin nombre",
+    prizeValue: value === null || value === undefined ? null : Number(value) || null,
+    prizeImageUrl: r.prize?.imageUrl ?? null,
+    playerName: r.user?.name ?? null,
+    playerPhone: r.user?.phone ?? null,
+    barId: r.bar?.id ?? null,
+    barName: r.bar?.name ?? null,
+    createdAt: r.createdAt,
+    expiresAt: r.expiresAt,
   }
 }
 

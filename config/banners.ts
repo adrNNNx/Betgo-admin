@@ -1,4 +1,5 @@
 import type { BannerComputedStatus, BannerScope } from "@/lib/banners/types"
+import type { ImagePolicy } from "@/lib/banners/image"
 
 /**
  * Límite de peso de imagen. El backend rechaza banners > 3MB (más estricto
@@ -15,6 +16,51 @@ export const IMAGE_ACCEPT = "image/jpeg,image/png,image/webp,image/gif"
 
 /** Reexport del límite de bares por si algún form mixto lo necesita. */
 export { MAX_IMAGE_MB as BAR_MAX_IMAGE_MB } from "@/config/bares"
+
+/**
+ * Cómo se ve el banner en la app del cliente. Medido sobre
+ * `betgo-usuarios/components/BannerCarousel.tsx`, que renderiza la imagen en
+ * una caja `aspect-[3.5/1] sm:aspect-[4/1]` con `object-cover` dentro de un
+ * contenedor `max-w-2xl`:
+ *
+ *   - celular (viewport 375px): 333 × 95 px  → 3.5:1
+ *   - desktop (tope, no crece):  662 × 166 px → 4:1
+ *
+ * `object-cover` nunca deforma: siempre recorta. Como la caja pasa de 4:1 a
+ * 3.5:1, una imagen 4:1 pierde ~6,25% de ancho de cada lado en celular.
+ */
+export const BANNER_IMAGE = {
+  /** Medida recomendada: ~2x el render máximo, nítida en retina. */
+  width: 1400,
+  height: 350,
+  /** Relación objetivo (1400/350). El desktop usa exactamente ésta. */
+  ratio: 4,
+  /** Relación en celular, la que más recorta. */
+  mobileRatio: 3.5,
+  /** Desvío tolerado sobre `ratio` antes de avisar (10%). */
+  ratioTolerance: 0.1,
+  /** Debajo de este ancho se ve borrosa en pantallas retina. */
+  minWidth: 1000,
+  /** Peso sugerido: el banner se baja sin optimizar en la wifi de un bar. */
+  idealKb: 200,
+  /** Zona segura sobre la medida recomendada, en px. */
+  safeArea: { x: 90, bottom: 60 },
+} as const
+
+/** Zona segura como porcentajes, para dibujarla sobre cualquier preview. */
+export const SAFE_AREA_PCT = {
+  x: (BANNER_IMAGE.safeArea.x / BANNER_IMAGE.width) * 100,
+  bottom: (BANNER_IMAGE.safeArea.bottom / BANNER_IMAGE.height) * 100,
+}
+
+/** Umbrales que consume `analyzeImage()`. */
+export const IMAGE_POLICY: ImagePolicy = {
+  ratio: BANNER_IMAGE.ratio,
+  ratioTolerance: BANNER_IMAGE.ratioTolerance,
+  minWidth: BANNER_IMAGE.minWidth,
+  idealKb: BANNER_IMAGE.idealKb,
+  maxMb: MAX_IMAGE_MB,
+}
 
 /** Paginación client-side (mismo criterio que bares/premios). */
 export const PAGE_SIZE = 10

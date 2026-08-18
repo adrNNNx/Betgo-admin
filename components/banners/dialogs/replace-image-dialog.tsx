@@ -79,7 +79,7 @@ export function ReplaceImageDialog({
         <DialogHeader>
           <DialogTitle>Reemplazar imagen</DialogTitle>
           <DialogDescription>
-            {banner.title} · la imagen anterior se elimina de Cloudinary automáticamente.
+            {banner.title} · La imagen anterior se eliminara automáticamente.
           </DialogDescription>
         </DialogHeader>
 

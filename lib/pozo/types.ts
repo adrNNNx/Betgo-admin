@@ -64,3 +64,33 @@ export type PoolState = {
 
 /** Dirección de un ajuste manual. */
 export type AdjustDirection = "add" | "sub"
+
+// --- Premios mayores ------------------------------------------------------
+
+export type ClaimStatus = "pending" | "delivered" | "expired"
+
+/**
+ * Comprobante de un premio mayor (`type: jackpot` del catálogo: iPhone, autos,
+ * montos grandes). El mozo no puede entregarlos, los autoriza un admin.
+ *
+ * OJO: no tiene nada que ver con ganar el pozo global. El pozo se acredita solo
+ * al saldo del jugador y no genera comprobante; que el tipo de premio se llame
+ * "jackpot" es coincidencia de nombre.
+ */
+export type MajorClaim = {
+  id: string
+  /** Código que trae el jugador: P-XXXXXXXX */
+  claimCode: string
+  prizeName: string
+  /** Valor en Gs. Suele venir null: el monto está en el nombre del premio. */
+  prizeValue: number | null
+  prizeImageUrl: string | null
+  playerName: string | null
+  playerPhone: string | null
+  barId: string | null
+  barName: string | null
+  /** ISO date-time de emisión. */
+  createdAt: string
+  /** ISO date-time de vencimiento. Vencido = ya no se puede entregar. */
+  expiresAt: string
+}
