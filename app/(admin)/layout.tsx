@@ -4,6 +4,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import { SiteHeader } from "@/components/layout/site-header"
 import { SessionProvider } from "@/components/session-provider"
+import { EXPIRED_PARAM } from "@/lib/auth"
 import { getSessionUser } from "@/lib/session"
 
 // Shell autenticado. El estado abierto/cerrado del sidebar lo persiste shadcn en
@@ -15,7 +16,17 @@ export default async function AdminLayout({
   children: React.ReactNode
 }) {
   const user = await getSessionUser()
-  if (!user) redirect("/login")
+  if (!user) {
+    // El proxy sólo mira si la cookie EXISTE (validarla en cada request costaría
+    // un viaje al backend por asset); acá se valida de verdad contra
+    // /auth/profile. Con un token presente pero rechazado —secret rotado,
+    // usuario borrado, base reseteada— las dos capas se contradicen: el proxy
+    // manda /login → /dashboard y el layout /dashboard → /login, sin fin.
+    //
+    // No podemos borrar las cookies desde acá: un Server Component no puede
+    // escribirlas. Le marcamos el caso al proxy, que sí puede, y ahí se cortan.
+    redirect(`/login?${EXPIRED_PARAM}=1`)
+  }
 
   return (
     <SessionProvider user={user}>

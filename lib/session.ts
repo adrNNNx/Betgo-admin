@@ -4,6 +4,7 @@ import { cache } from "react"
 
 import {
   ACCESS_COOKIE,
+  COOKIE_BASE,
   REFRESH_COOKIE,
   REFRESH_MAX_AGE,
   type SessionUser,
@@ -19,10 +20,11 @@ export async function setTokens(
   expiresIn: number
 ) {
   const jar = await cookies()
-  const secure = process.env.NODE_ENV === "production"
-  const base = { httpOnly: true, secure, sameSite: "lax" as const, path: "/" }
-  jar.set(ACCESS_COOKIE, accessToken, { ...base, maxAge: expiresIn })
-  jar.set(REFRESH_COOKIE, refreshToken, { ...base, maxAge: REFRESH_MAX_AGE })
+  jar.set(ACCESS_COOKIE, accessToken, { ...COOKIE_BASE, maxAge: expiresIn })
+  jar.set(REFRESH_COOKIE, refreshToken, {
+    ...COOKIE_BASE,
+    maxAge: REFRESH_MAX_AGE,
+  })
 }
 
 export async function clearTokens() {

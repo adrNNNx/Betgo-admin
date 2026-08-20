@@ -1,6 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server"
 
-import { ACCESS_COOKIE, REFRESH_COOKIE, REFRESH_MAX_AGE } from "@/lib/auth"
+import {
+  ACCESS_COOKIE,
+  COOKIE_BASE,
+  EXPIRED_PARAM,
+  REFRESH_COOKIE,
+  REFRESH_MAX_AGE,
+} from "@/lib/auth"
 
 // ponytail: el access cookie tiene maxAge = expiresIn (15m), así que el navegador
 // lo borra solo al vencer. Entonces "no hay access pero sí refresh" == token
@@ -31,7 +37,16 @@ export async function proxy(req: NextRequest) {
   const isLogin = req.nextUrl.pathname === "/login"
   const access = req.cookies.get(ACCESS_COOKIE)?.value
   const refreshToken = req.cookies.get(REFRESH_COOKIE)?.value
-  const secure = process.env.NODE_ENV === "production"
+
+  // El layout validó el token contra el backend y lo rechazó. Va PRIMERO: si no,
+  // la rama `if (access)` de abajo vería la cookie todavía presente y rebotaría
+  // a /dashboard, que es exactamente el bucle que esto corta.
+  if (isLogin && req.nextUrl.searchParams.has(EXPIRED_PARAM)) {
+    const res = NextResponse.next()
+    res.cookies.delete(ACCESS_COOKIE)
+    res.cookies.delete(REFRESH_COOKIE)
+    return res
+  }
 
   // Sin refresh token = sin sesión.
   if (!refreshToken) {
@@ -66,13 +81,12 @@ export async function proxy(req: NextRequest) {
     : NextResponse.next({ request: { headers: req.headers } })
 
   // ...y persistir en el navegador.
-  const base = { httpOnly: true, secure, sameSite: "lax" as const, path: "/" }
   res.cookies.set(ACCESS_COOKIE, tokens.accessToken, {
-    ...base,
+    ...COOKIE_BASE,
     maxAge: tokens.expiresIn,
   })
   res.cookies.set(REFRESH_COOKIE, tokens.refreshToken, {
-    ...base,
+    ...COOKIE_BASE,
     maxAge: REFRESH_MAX_AGE,
   })
   return res
