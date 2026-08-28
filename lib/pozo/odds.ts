@@ -28,20 +28,22 @@ export function probAtLeast(p: number, k: number): number {
 
 /**
  * Cada cuántas jugadas paga un símbolo, dado su peso sobre el total.
- * Devuelve null si nunca paga (probabilidad 0).
+ *
+ * Siempre devuelve un número: el peso mínimo es 1 (lo valida el backend con
+ * `@Min(1)` y la UI no deja bajar de ahí), así que ningún símbolo real tiene
+ * probabilidad cero. El `|| 1` del divisor sólo cubre la lista vacía.
  */
 export function spinsPerWin(
   weight: number,
   totalWeight: number,
   minMatch: MatchLevel
-): number | null {
-  const p = probAtLeast(weight / (totalWeight || 1), minMatch)
-  return p > 0 ? Math.round(1 / p) : null
+): number {
+  const p = probAtLeast(Math.max(weight, 1) / (totalWeight || 1), minMatch)
+  return Math.round(1 / p)
 }
 
-/** "1 cada 217 jugadas" — o el aviso si es tan raro que no vale la pena. */
-export function formatOdds(spins: number | null): string {
-  if (spins === null) return "nunca"
+/** "1 cada 217 jugadas". */
+export function formatOdds(spins: number): string {
   if (spins <= 1) return "casi todas las jugadas"
   return `1 cada ${spins.toLocaleString("es-PY")} jugadas`
 }

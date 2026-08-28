@@ -42,9 +42,11 @@ assert.equal(spinsPerWin(32, TOTAL, 3), 6) // Trébol: observado 1/6
 assert.equal(spinsPerWin(20, TOTAL, 4), 193) // Diamante: observado 1/193
 assert.equal(spinsPerWin(20, TOTAL, 5), 4383) // Corona: observado 1/4454
 
-// Un símbolo sin peso no paga nunca.
-assert.equal(spinsPerWin(0, TOTAL, 3), null)
-assert.equal(formatOdds(null), "nunca")
+// El peso mínimo es 1 (el backend valida @Min(1) y la UI no deja bajar de ahí),
+// así que spinsPerWin siempre da un número: nunca hay "probabilidad cero".
+// Un 0 que se filtre igual se trata como 1 en vez de romper el render.
+assert.equal(spinsPerWin(1, TOTAL, 3), spinsPerWin(0, TOTAL, 3))
+assert.ok(Number.isFinite(spinsPerWin(1, TOTAL, 5)))
 
 // El aviso escala con la frecuencia.
 assert.equal(oddsLevel(6), "extremo")

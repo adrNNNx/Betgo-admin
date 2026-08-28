@@ -48,9 +48,16 @@ export function expiryLabel(expiresAt: string, now = new Date()): string {
 /**
  * Un comprobante sólo se puede entregar si está pendiente y no venció.
  * Un vencido no se recupera por API: hay que tocar la base a mano.
+ *
+ * `now` es inyectable como en el resto del módulo, para poder testear el borde
+ * del vencimiento sin que el resultado dependa del día en que se corra.
  */
-export function canDeliver(claim: MajorClaim, status: ClaimStatus): boolean {
-  return status === "pending" && daysLeft(claim.expiresAt) >= 0
+export function canDeliver(
+  claim: MajorClaim,
+  status: ClaimStatus,
+  now = new Date()
+): boolean {
+  return status === "pending" && daysLeft(claim.expiresAt, now) >= 0
 }
 
 /** Busca por código, jugador o premio dentro de la página cargada. */

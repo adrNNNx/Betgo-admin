@@ -315,9 +315,10 @@ export function BarSymbols({
                   ODDS_CLASS[oddsLevel(combined)]
                 )}
               >
-                paga{" "}
                 <strong className="font-semibold tabular-nums">
-                  {formatOdds(combined)}
+                  {combined === null
+                    ? "ningún símbolo paga"
+                    : `paga ${formatOdds(combined)}`}
                 </strong>
               </span>
             </div>

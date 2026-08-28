@@ -17,7 +17,14 @@ import {
 import { NavMain } from "@/components/layout/nav-main"
 import { NavUser } from "@/components/layout/nav-user"
 
-export function AppSidebar({ user }: { user: SessionUser }) {
+export function AppSidebar({
+  user,
+  pendingJackpots = 0,
+}: {
+  user: SessionUser
+  /** Pozos ganados sin pagar. Es la única señal de que alguien ganó. */
+  pendingJackpots?: number
+}) {
   // El filtrado vive acá (client): la nav lleva componentes de icono que no son
   // serializables, así que no pueden cruzar la frontera server→client por props.
   const groups = filterNavByRole(navigation, user.role)
@@ -42,7 +49,7 @@ export function AppSidebar({ user }: { user: SessionUser }) {
       </SidebarHeader>
 
       <SidebarContent>
-        <NavMain groups={groups} />
+        <NavMain groups={groups} badges={{ jackpots: pendingJackpots }} />
       </SidebarContent>
 
       <SidebarFooter>

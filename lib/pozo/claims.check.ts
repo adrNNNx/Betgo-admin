@@ -62,14 +62,14 @@ const claim = (expiresAt: string): MajorClaim => ({
 })
 
 // Vencido: nunca, aunque el backend todavía lo liste como pendiente.
-assert.equal(canDeliver(claim(enDias(-1)), "pending"), false)
+assert.equal(canDeliver(claim(enDias(-1)), "pending", AHORA), false)
 // Ya entregado o marcado vencido: tampoco.
-assert.equal(canDeliver(claim(enDias(5)), "delivered"), false)
-assert.equal(canDeliver(claim(enDias(5)), "expired"), false)
+assert.equal(canDeliver(claim(enDias(5)), "delivered", AHORA), false)
+assert.equal(canDeliver(claim(enDias(5)), "expired", AHORA), false)
 // El único caso que sí.
-assert.equal(canDeliver(claim(enDias(5)), "pending"), true)
+assert.equal(canDeliver(claim(enDias(5)), "pending", AHORA), true)
 // El que vence hoy todavía se entrega.
-assert.equal(canDeliver(claim(enDias(0)), "pending"), true)
+assert.equal(canDeliver(claim(enDias(0)), "pending", AHORA), true)
 
 // --- búsqueda ---
 const c = claim(enDias(5))

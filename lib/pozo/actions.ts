@@ -4,13 +4,19 @@ import { revalidatePath } from "next/cache"
 
 import { apiFetch } from "@/lib/session"
 import {
+  getJackpotClaims,
   getMajorClaims,
   getMovementsPage,
+  type JackpotClaimsPage,
   type MajorClaimsPage,
   type MovementCategory,
   type MovementsPage,
 } from "@/lib/pozo/api"
-import type { AdjustDirection, ClaimStatus } from "@/lib/pozo/types"
+import type {
+  AdjustDirection,
+  ClaimStatus,
+  JackpotClaimStatus,
+} from "@/lib/pozo/types"
 
 /** Llama al backend; tira con el mensaje del backend si falla. */
 async function send(path: string, init: RequestInit): Promise<Response> {
@@ -80,6 +86,52 @@ export async function fetchMovements(params: {
 export async function setCostPerSpin(cost: number) {
   await send("/global-pool/1", jsonInit("PATCH", { costPerPlay: cost }))
   revalidatePath("/pozo")
+}
+
+/**
+ * Pozos ganados. `status` undefined = la vista "Pendientes", que junta
+ * `pending_contact` e `in_review`: es lo que le falta resolver al admin.
+ *
+ * ponytail: el backend filtra por UN estado, así que para esa vista pedimos los
+ * dos y ordenamos acá. Techo: 200 por estado (el tope del endpoint). Llegar ahí
+ * significaría 200 pozos sin pagar, un problema bastante más grave que la
+ * paginación. Si algún día hace falta, pedir `?status=pending` al backend.
+ */
+export async function fetchJackpotClaims(params: {
+  status?: JackpotClaimStatus
+  limit: number
+  offset: number
+}): Promise<JackpotClaimsPage> {
+  if (params.status) return getJackpotClaims(params)
+
+  const [sinContactar, enRevision] = await Promise.all([
+    getJackpotClaims({ status: "pending_contact", limit: 200, offset: 0 }),
+    getJackpotClaims({ status: "in_review", limit: 200, offset: 0 }),
+  ])
+  const data = [...sinContactar.data, ...enRevision.data].sort(
+    (a, b) => new Date(b.playedAt).getTime() - new Date(a.playedAt).getTime()
+  )
+  return {
+    data: data.slice(params.offset, params.offset + params.limit),
+    total: sinContactar.total + enRevision.total,
+  }
+}
+
+/**
+ * Marca un pozo como pagado (POST /jackpot-claims/:folio/pay).
+ *
+ * IRREVERSIBLE: no hay endpoint para deshacerlo y el monto se suma a
+ * `total_paid` del pozo global. Los errores del backend (ya pagado, folio
+ * inexistente, admin sin perfil de staff) suben tal cual para mostrarlos.
+ */
+export async function markJackpotPaid(folio: string, notes?: string) {
+  await send(
+    `/jackpot-claims/${encodeURIComponent(folio)}/pay`,
+    jsonInit("POST", { notes: notes?.trim() || undefined })
+  )
+  revalidatePath("/pozo")
+  // El badge vive en el layout: sin esto seguiría mostrando el pozo ya pagado.
+  revalidatePath("/", "layout")
 }
 
 /** Trae una página de premios mayores (para los filtros del cliente). */

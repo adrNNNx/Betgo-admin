@@ -65,6 +65,44 @@ export type PoolState = {
 /** Dirección de un ajuste manual. */
 export type AdjustDirection = "add" | "sub"
 
+// --- Pozos ganados (pago manual) ------------------------------------------
+
+/**
+ * `pending_contact` → el ganador todavía no escribió.
+ * `in_review`       → ya escribió y espera el pago: es el que pide acción.
+ * `paid`            → transferido. Terminal, no hay vuelta atrás.
+ */
+export type JackpotClaimStatus = "pending_contact" | "in_review" | "paid"
+
+/**
+ * Comprobante de un pozo global ganado. El pozo NO se acredita al saldo: se
+ * emite este folio y administración transfiere a mano.
+ */
+export type JackpotClaim = {
+  id: string
+  /** Folio que el ganador manda por WhatsApp: J-XXXXXX */
+  folio: string
+  amount: number
+  status: JackpotClaimStatus
+  /** ISO date-time de cuándo lo ganó. */
+  playedAt: string
+  /** ISO date-time de cuándo se comunicó, o null si todavía no. */
+  contactedAt: string | null
+  paidAt: string | null
+  barName: string | null
+  playerName: string | null
+  playerPhone: string | null
+}
+
+/** Lo que alimenta el badge del panel. */
+export type JackpotPendingCount = {
+  total: number
+  pendingContact: number
+  inReview: number
+  /** Plata que la empresa debe hoy. */
+  amountOwed: number
+}
+
 // --- Premios mayores ------------------------------------------------------
 
 export type ClaimStatus = "pending" | "delivered" | "expired"

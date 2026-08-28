@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/layout/site-header"
 import { SessionProvider } from "@/components/session-provider"
 import { EXPIRED_PARAM } from "@/lib/auth"
 import { getSessionUser } from "@/lib/session"
+import { getJackpotPendingCount } from "@/lib/pozo/api"
 
 // Shell autenticado. El estado abierto/cerrado del sidebar lo persiste shadcn en
 // la cookie `sidebar_state`. El usuario se resuelve server-side y baja por props
@@ -28,10 +29,18 @@ export default async function AdminLayout({
     redirect(`/login?${EXPIRED_PARAM}=1`)
   }
 
+  // Se resuelve acá para que el badge esté en TODAS las pantallas: es la única
+  // vía por la que un admin se entera de que alguien ganó el pozo (no hay mail
+  // ni push). Sólo lo ve un admin: al resto el endpoint le da 403 y cae a 0.
+  const jackpots =
+    user.role === "admin"
+      ? await getJackpotPendingCount()
+      : { total: 0, pendingContact: 0, inReview: 0, amountOwed: 0 }
+
   return (
     <SessionProvider user={user}>
       <SidebarProvider>
-        <AppSidebar user={user} />
+        <AppSidebar user={user} pendingJackpots={jackpots.total} />
         <SidebarInset>
           <SiteHeader />
           <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">{children}</div>

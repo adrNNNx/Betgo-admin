@@ -4,6 +4,9 @@ import { apiFetch } from "@/lib/session"
 import type {
   ClaimStatus,
   GlobalSymbol,
+  JackpotClaim,
+  JackpotClaimStatus,
+  JackpotPendingCount,
   MajorClaim,
   MatchLevel,
   MovementType,
@@ -56,6 +59,96 @@ export async function getPoolState(): Promise<PoolState> {
     }
   } catch {
     return EMPTY_POOL
+  }
+}
+
+type RawJackpotClaim = {
+  id: string
+  folio: string
+  amount: number | string
+  status: JackpotClaimStatus
+  playedAt: string
+  contactedAt: string | null
+  paidAt: string | null
+  // El backend manda `bar: null` si el claim quedó sin bar, y omite `user`
+  // cuando no lo incluyó en la consulta.
+  bar?: { id: string; name: string } | null
+  user?: { id: string; name: string | null; phone: string | null } | null
+}
+
+export type JackpotClaimsPage = { data: JackpotClaim[]; total: number }
+
+const EMPTY_COUNT: JackpotPendingCount = {
+  total: 0,
+  pendingContact: 0,
+  inReview: 0,
+  amountOwed: 0,
+}
+
+function toJackpotClaim(r: RawJackpotClaim): JackpotClaim {
+  return {
+    id: r.id,
+    folio: r.folio,
+    amount: Number(r.amount) || 0,
+    status: r.status,
+    playedAt: r.playedAt,
+    contactedAt: r.contactedAt ?? null,
+    paidAt: r.paidAt ?? null,
+    barName: r.bar?.name ?? null,
+    playerName: r.user?.name ?? null,
+    playerPhone: r.user?.phone ?? null,
+  }
+}
+
+/** Pozos ganados (GET /jackpot-claims). Sin `status` trae todos. */
+export async function getJackpotClaims(params: {
+  status?: JackpotClaimStatus
+  limit: number
+  offset: number
+}): Promise<JackpotClaimsPage> {
+  const qs = new URLSearchParams({
+    limit: String(params.limit),
+    offset: String(params.offset),
+  })
+  if (params.status) qs.set("status", params.status)
+
+  try {
+    const res = await apiFetch(`/jackpot-claims?${qs.toString()}`)
+    if (!res.ok) return { data: [], total: 0 }
+    const json = (await res.json()) as {
+      data?: RawJackpotClaim[]
+      total?: number
+    } | null
+    if (!json || !Array.isArray(json.data)) return { data: [], total: 0 }
+    return {
+      data: json.data.map(toJackpotClaim),
+      total: json.total ?? json.data.length,
+    }
+  } catch {
+    return { data: [], total: 0 }
+  }
+}
+
+/**
+ * Contador del badge (GET /jackpot-claims/pending-count).
+ *
+ * Es la ÚNICA vía por la que un admin se entera de que alguien ganó el pozo: no
+ * hay mail ni push. Cae a ceros si falla, para no romper el layout entero.
+ */
+export async function getJackpotPendingCount(): Promise<JackpotPendingCount> {
+  try {
+    const res = await apiFetch("/jackpot-claims/pending-count")
+    if (!res.ok) return EMPTY_COUNT
+    const json = (await res.json()) as Partial<JackpotPendingCount> | null
+    if (!json || typeof json.total !== "number") return EMPTY_COUNT
+    return {
+      total: json.total,
+      pendingContact: json.pendingContact ?? 0,
+      inReview: json.inReview ?? 0,
+      amountOwed: Number(json.amountOwed) || 0,
+    }
+  } catch {
+    return EMPTY_COUNT
   }
 }
 

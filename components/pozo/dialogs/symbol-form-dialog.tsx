@@ -4,7 +4,11 @@ import { useEffect, useRef, useState, useTransition } from "react"
 import { Check, Minus, Plus, Smile, Trash2, UploadCloud } from "lucide-react"
 
 import type { GlobalSymbol } from "@/lib/pozo/types"
-import { MAX_SYMBOL_WEIGHT, SYMBOL_EMOJIS } from "@/config/pozo"
+import {
+  MAX_SYMBOL_WEIGHT,
+  MIN_SYMBOL_WEIGHT,
+  SYMBOL_EMOJIS,
+} from "@/config/pozo"
 import { MAX_IMAGE_MB, IMAGE_ACCEPT } from "@/config/bares"
 import { deleteSymbol as deleteSymbolAction, saveSymbol } from "@/lib/pozo/actions"
 import { withToast } from "@/lib/run-action"
@@ -60,7 +64,8 @@ export function SymbolFormDialog({
     setError(null)
   }, [open, symbol])
 
-  const clamp = (n: number) => Math.max(0, Math.min(MAX_SYMBOL_WEIGHT, n))
+  const clamp = (n: number) =>
+    Math.max(MIN_SYMBOL_WEIGHT, Math.min(MAX_SYMBOL_WEIGHT, n))
 
   const onPickFile = (f: File | undefined) => {
     if (!f) return
@@ -227,10 +232,10 @@ export function SymbolFormDialog({
           <div className="flex items-center gap-4">
             <Slider
               value={[weight]}
-              min={0}
+              min={MIN_SYMBOL_WEIGHT}
               max={MAX_SYMBOL_WEIGHT}
               step={1}
-              onValueChange={([v]) => setWeight(v)}
+              onValueChange={([v]) => setWeight(clamp(v))}
               className="flex-1"
             />
             <div className="flex items-center rounded-md border">

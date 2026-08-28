@@ -1,10 +1,12 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { BarChart3, Settings2, Trophy } from "lucide-react"
+import { Banknote, BarChart3, Settings2, Trophy } from "lucide-react"
 
 import type {
   GlobalSymbol,
+  JackpotClaim,
+  JackpotPendingCount,
   MajorClaim,
   PoolMovement,
   PoolState,
@@ -21,6 +23,7 @@ import { PoolHistoryTable } from "@/components/pozo/pool-history-table"
 import { GameCostConfig } from "@/components/pozo/game-cost-config"
 import { GlobalSymbols } from "@/components/pozo/global-symbols"
 import { MajorPrizes } from "@/components/pozo/major-prizes"
+import { WonJackpots } from "@/components/pozo/won-jackpots"
 import { PrizeTable } from "@/components/premios/prize-table"
 import { PrizeFormDialog } from "@/components/premios/dialogs/prize-form-dialog"
 import { DeletePrizeDialog } from "@/components/premios/dialogs/delete-prize-dialog"
@@ -44,6 +47,9 @@ export function PozoGlobal({
   majorClaims,
   majorClaimsTotal,
   bars,
+  jackpotClaims,
+  jackpotClaimsTotal,
+  jackpotCount,
 }: {
   pool: PoolState
   movements: PoolMovement[]
@@ -53,6 +59,9 @@ export function PozoGlobal({
   majorClaims: MajorClaim[]
   majorClaimsTotal: number
   bars: BarRef[]
+  jackpotClaims: JackpotClaim[]
+  jackpotClaimsTotal: number
+  jackpotCount: JackpotPendingCount
 }) {
   const [pool, setPool] = useState(initialPool)
   // Se incrementa tras un ajuste para que el historial recargue su primera página.
@@ -132,6 +141,15 @@ export function PozoGlobal({
             <BarChart3 className="size-4" />
             Resumen
           </TabsTrigger>
+          <TabsTrigger value="ganados">
+            <Banknote className="size-4" />
+            Pozos ganados
+            {jackpotCount.total > 0 && (
+              <span className="ml-1 grid h-5 min-w-5 place-items-center rounded-full bg-red-500 px-1 text-[11px] font-bold tabular-nums text-white">
+                {jackpotCount.total}
+              </span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="premios">
             <Trophy className="size-4" />
             Premios mayores
@@ -161,6 +179,14 @@ export function PozoGlobal({
             initialData={movements}
             total={movementsTotal}
             refreshToken={historyRefresh}
+          />
+        </TabsContent>
+
+        <TabsContent value="ganados" className="flex flex-col gap-6">
+          <WonJackpots
+            initialData={jackpotClaims}
+            initialTotal={jackpotClaimsTotal}
+            count={jackpotCount}
           />
         </TabsContent>
 

@@ -164,18 +164,24 @@ export function GlobalSymbols({
         <div className="flex flex-wrap gap-x-8 gap-y-3 border-b bg-secondary/40 px-6 py-4">
           <Summary
             label="Premio menor"
-            value={formatOdds(combined)}
-            className={ODDS_CLASS[oddsLevel(combined)]}
+            value={
+              combined === null
+                ? "ningún símbolo paga"
+                : formatOdds(combined)
+            }
+            className={
+              combined === null
+                ? "text-amber-600 dark:text-amber-500"
+                : ODDS_CLASS[oddsLevel(combined)]
+            }
           />
           <Summary
             label="Pozo global"
             value={
-              jackpotSymbols.length === 0
-                ? "nadie lo entrega"
-                : formatOdds(jackpotOdds)
+              jackpotOdds === null ? "nadie lo entrega" : formatOdds(jackpotOdds)
             }
             className={
-              jackpotSymbols.length === 0
+              jackpotOdds === null
                 ? "text-amber-600 dark:text-amber-500"
                 : ODDS_CLASS[jackpotOddsLevel(jackpotOdds)]
             }
@@ -201,7 +207,7 @@ export function GlobalSymbols({
 
           {/* El peso se edita aparte, así que la advertencia del diálogo no
               alcanza: hay que avisar mientras el problema siga en pie. */}
-          {jackpotWarn && (
+          {jackpotWarn && jackpotOdds !== null && (
             <p
               className={cn(
                 "mb-5 flex items-start gap-2.5 rounded-lg border px-4 py-3 text-[13px]",
@@ -225,9 +231,7 @@ export function GlobalSymbols({
           <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-3.5">
             {sorted.map((s) => {
               const prob = ((s.weight || 0) / totalWeight) * 100
-              const spins = s.hasPrize
-                ? spinsPerWin(s.weight, totalWeight, s.minMatch)
-                : null
+              const spins = spinsPerWin(s.weight, totalWeight, s.minMatch)
               const level = oddsLevel(spins)
               // El pozo siempre exige los 5, no el umbral del símbolo.
               const jackpotSpins = spinsPerWin(s.weight, totalWeight, 5)

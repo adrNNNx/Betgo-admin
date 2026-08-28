@@ -58,12 +58,13 @@ assert.deepEqual(ids(analyze({ width: 800, height: 200 }, 150 * KB)), [
   "resolucion",
 ])
 
-// Pesada pero perfecta de medidas → sólo el aviso de peso.
-assert.deepEqual(ids(analyze(ideal, 900 * KB)), ["peso"])
+// El peso ya no genera aviso: el único corte por tamaño es el error duro de
+// 3MB en el formulario (ver onPick), así que una imagen pesada pero de medidas
+// correctas pasa limpia.
+assert.deepEqual(ids(analyze(ideal, 900 * KB)), [])
 
-// Todo mal a la vez → los tres avisos.
+// Medidas mal → los dos avisos que quedan.
 assert.deepEqual(ids(analyze({ width: 640, height: 480 }, 2.5 * 1024 * KB)), [
-  "peso",
   "ratio",
   "resolucion",
 ])
@@ -74,8 +75,8 @@ assert.deepEqual(ids(analyze({ width: 1400, height: 380 }, 100 * KB)), []) // 3.
 // Y sí avisa apenas se pasa.
 assert.deepEqual(ids(analyze({ width: 1400, height: 420 }, 100 * KB)), ["ratio"]) // 3.33:1
 
-// Sin medidas (archivo corrupto) igual evalúa el peso, sin romper.
-assert.deepEqual(ids(analyze(null, 900 * KB)), ["peso"])
+// Sin medidas (archivo corrupto) no avisa nada, pero tampoco rompe.
+assert.deepEqual(analyze(null, 900 * KB), [])
 assert.deepEqual(analyze(null, 100 * KB), [])
 
 // El mensaje trae números concretos, no "la imagen no tiene el tamaño correcto".

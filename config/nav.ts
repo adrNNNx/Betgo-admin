@@ -22,6 +22,11 @@ export type NavItem = {
   icon: LucideIcon
   /** Roles que pueden ver el ítem. Vacío/undefined = todos. */
   roles?: Role[]
+  /**
+   * Clave del contador que muestra este ítem, si tiene alguno.
+   * El valor lo resuelve el layout (server) y baja por props.
+   */
+  badge?: "jackpots"
 }
 
 export type NavGroup = {
@@ -39,7 +44,7 @@ export const navigation: NavGroup[] = [
       { title: "Premios", url: "/premios", icon: Gift },
       { title: "Banners", url: "/banners", icon: GalleryHorizontalEnd },
       { title: "Transacciones", url: "/transacciones", icon: ArrowLeftRight },
-      { title: "Pozo", url: "/pozo", icon: Trophy },
+      { title: "Pozo", url: "/pozo", icon: Trophy, badge: "jackpots" },
     ],
   },
 ]

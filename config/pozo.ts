@@ -20,6 +20,12 @@ export const QUICK_COSTS = [1000, 2000, 5000, 10000]
 /** Cuántos movimientos se muestran por página en el historial. */
 export const HISTORY_PAGE_SIZE = 50
 
+/**
+ * Peso mínimo por símbolo. El backend valida `@Min(1)`: un símbolo con peso 0
+ * no puede existir, así que la UI no debe dejar llegar a ese valor.
+ */
+export const MIN_SYMBOL_WEIGHT = 1
+
 /** Peso máximo permitido por símbolo. */
 export const MAX_SYMBOL_WEIGHT = 50
 
