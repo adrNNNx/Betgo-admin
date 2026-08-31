@@ -1,4 +1,8 @@
-import type { JackpotClaim, JackpotClaimStatus } from "@/lib/pozo/types"
+import type {
+  JackpotClaim,
+  JackpotClaimStatus,
+  MovementJackpot,
+} from "@/lib/pozo/types"
 
 export const JACKPOT_PAGE_SIZE = 25
 
@@ -65,6 +69,35 @@ export function byUrgency(a: JackpotClaim, b: JackpotClaim): number {
   const diff = rank(a) - rank(b)
   if (diff !== 0) return diff
   return new Date(a.playedAt).getTime() - new Date(b.playedAt).getTime()
+}
+
+/**
+ * Cómo se rotula un movimiento de pozo ganado en el historial.
+ *
+ * El movimiento se registra cuando alguien GANA, no cuando cobra: decirle
+ * "Pago" a todos mostraba como saldada una deuda que la empresa todavía tiene.
+ *
+ *  - `paid`    → ya se transfirió.
+ *  - `pending` → ganado y sin pagar: hay que resolverlo.
+ *  - `legacy`  → ganado antes del comprobante, cuando se acreditaba al saldo.
+ *                No hay folio ni estado que mostrar, y ya está cerrado.
+ */
+export type JackpotTone = "paid" | "pending" | "legacy"
+
+export function jackpotMovementView(jackpot: MovementJackpot | null): {
+  label: string
+  tone: JackpotTone
+  folio: string | null
+} {
+  if (!jackpot) return { label: "Pozo ganado", tone: "legacy", folio: null }
+  if (jackpot.status === "paid") {
+    return { label: "Pagado", tone: "paid", folio: jackpot.folio }
+  }
+  return {
+    label: "Pozo ganado · pendiente de pago",
+    tone: "pending",
+    folio: jackpot.folio,
+  }
 }
 
 /** Busca por folio, ganador o teléfono dentro de la página cargada. */

@@ -234,6 +234,14 @@ type RawMovement = {
   playId: string | null
   notes: string | null
   createdAt: string
+  // Sólo en los `jackpot_win` con comprobante. Los pozos ganados antes de que
+  // existiera el folio (se acreditaban al saldo) llegan sin esto.
+  jackpot?: {
+    folio: string
+    status: JackpotClaimStatus
+    paidAt: string | null
+    contactedAt: string | null
+  } | null
 }
 
 /**
@@ -248,16 +256,23 @@ function toMovementType(m: RawMovement): MovementType {
 }
 
 function toMovement(m: RawMovement): PoolMovement {
-  const before = Number(m.balanceBefore) || 0
-  const after = Number(m.balanceAfter) || 0
   return {
     id: m.id,
     at: m.createdAt,
     type: toMovementType(m),
-    // El signo real sale de balanceAfter − balanceBefore.
-    poolDelta: after - before,
-    total: Number(m.amount) || 0,
+    // El monto viene con su signo en `amount`. NO restar los balances: cuando
+    // el pozo ya estaba en el mínimo se vacía de 100.000 a 100.000 y esa resta
+    // daba 0 pese a que el egreso fue de 100.000.
+    poolDelta: Number(m.amount) || 0,
     notes: m.notes,
+    jackpot: m.jackpot
+      ? {
+          folio: m.jackpot.folio,
+          status: m.jackpot.status,
+          paidAt: m.jackpot.paidAt ?? null,
+          contactedAt: m.jackpot.contactedAt ?? null,
+        }
+      : null,
   }
 }
 

@@ -3,20 +3,38 @@
 /** Tipo de movimiento sobre la porción de pozo global. */
 export type MovementType = "game_spin" | "topup" | "adjust" | "payout"
 
+/**
+ * Estado del pago al ganador, adjunto a los movimientos de pozo ganado.
+ *
+ * `null` en tres casos, y los tres son válidos:
+ *  - el movimiento no es un pozo ganado (jugada, recarga, ajuste);
+ *  - es un pozo ganado ANTES de que existiera el comprobante (se acreditaba
+ *    directo al saldo, así que nunca hubo folio);
+ *  - `paidAt`/`contactedAt` faltan aunque el comprobante exista.
+ */
+export type MovementJackpot = {
+  /** Folio que el ganador dicta por WhatsApp: J-XXXXXX */
+  folio: string
+  status: JackpotClaimStatus
+  paidAt: string | null
+  contactedAt: string | null
+}
+
 export type PoolMovement = {
   id: string
   /** ISO date-time del movimiento. */
   at: string
   type: MovementType
-  /** Impacto sobre el pozo global (positivo suma, negativo resta). */
+  /**
+   * Impacto sobre el pozo, con signo: negativo egreso, positivo aporte.
+   *
+   * Sale de `amount` del backend, NO de restar los balances. Cuando el pozo ya
+   * estaba en su mínimo, se vacía de 100.000 a 100.000 y esa resta da cero
+   * aunque el egreso real haya sido de 100.000.
+   */
   poolDelta: number
-  /** Monto total de la operación (ej. la recarga completa antes de repartir). */
-  total: number
-  /** Reparto de la recarga hacia el bar (solo `topup`). */
-  barShare?: number
-  /** Reparto de la recarga hacia la empresa (solo `topup`). */
-  companyShare?: number
   notes?: string | null
+  jackpot: MovementJackpot | null
 }
 
 export type GlobalSymbol = {

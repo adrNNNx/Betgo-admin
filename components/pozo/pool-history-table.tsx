@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, History, Loader2, Search } from "lucide-reac
 
 import type { MovementType, PoolMovement } from "@/lib/pozo/types"
 import { fetchMovements } from "@/lib/pozo/actions"
+import { jackpotMovementView } from "@/lib/pozo/jackpots"
 import { formatDateTime, formatNumber } from "@/lib/pozo/format"
 import { HISTORY_FILTERS, HISTORY_PAGE_SIZE } from "@/config/pozo"
 import { cn } from "@/lib/utils"
@@ -32,7 +33,40 @@ const DETAIL_FALLBACK: Record<MovementType, string> = {
   game_spin: "Aporte por tirada",
   topup: "Recarga de bar",
   adjust: "Ajuste de administrador",
-  payout: "Egreso del pozo",
+  payout: "Pozo ganado",
+}
+
+/**
+ * Detalle de la fila. En los pozos ganados mostramos el folio —es lo que el
+ * ganador dicta por WhatsApp— y, si ya se pagó, cuándo.
+ */
+function MovementDetail({ movement }: { movement: PoolMovement }) {
+  if (movement.type !== "payout") {
+    return (
+      <span className="text-[12.5px] text-muted-foreground">
+        {DETAIL_FALLBACK[movement.type]}
+      </span>
+    )
+  }
+
+  const { folio } = jackpotMovementView(movement.jackpot)
+  const paidAt = movement.jackpot?.paidAt
+
+  return (
+    <span className="text-[12.5px] text-muted-foreground">
+      {folio ? (
+        <span className="font-mono font-medium text-foreground">{folio}</span>
+      ) : (
+        // Ganado antes del comprobante: se acreditaba al saldo del jugador.
+        "Acreditado al saldo"
+      )}
+      {paidAt && (
+        <span className="block text-[11px]">
+          Pagado el {formatDateTime(paidAt).date}
+        </span>
+      )}
+    </span>
+  )
 }
 
 type Category = MovementType | "all"
@@ -101,7 +135,8 @@ export function PoolHistoryTable({
         </CardTitle>
         <CardDescription>
           Movimientos sobre la porción de pozo global: jugadas, recargas,
-          ajustes y pagos a ganadores.
+          ajustes y pozos ganados. El pozo se descuenta al ganarse; el pago al
+          ganador se resuelve en la pestaña “Pozos ganados”.
         </CardDescription>
       </CardHeader>
 
@@ -196,13 +231,13 @@ export function PoolHistoryTable({
                           <span className="mr-0.5 text-[11px] font-medium opacity-75">
                             Gs.
                           </span>
-                          {formatNumber(m.poolDelta)}
+                          {/* El signo lo pone el prefijo: `poolDelta` ya viene
+                              negativo en los egresos y duplicaría el "−". */}
+                          {formatNumber(Math.abs(m.poolDelta))}
                         </span>
                       </TableCell>
                       <TableCell>
-                        <span className="text-[12.5px] text-muted-foreground">
-                          {DETAIL_FALLBACK[m.type]}
-                        </span>
+                        <MovementDetail movement={m} />
                       </TableCell>
                       <TableCell className="max-w-56 text-[12.5px] text-muted-foreground">
                         {m.notes || "—"}

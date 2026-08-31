@@ -9,11 +9,16 @@ import assert from "node:assert/strict"
 import {
   byUrgency,
   canPay,
+  jackpotMovementView,
   matchesFolio,
   statusForView,
   STATUS_META,
 } from "./jackpots.ts"
-import type { JackpotClaim, JackpotClaimStatus } from "./types.ts"
+import type {
+  JackpotClaim,
+  JackpotClaimStatus,
+  MovementJackpot,
+} from "./types.ts"
 
 const claim = (
   over: Partial<JackpotClaim> & { status: JackpotClaimStatus }
@@ -82,5 +87,51 @@ assert.equal(matchesFolio(c, "J-OTRO"), false)
 const huerfano = claim({ status: "in_review", playerName: null, playerPhone: null })
 assert.equal(matchesFolio(huerfano, "QA Pozo"), false)
 assert.equal(matchesFolio(huerfano, "J-QNXRUM"), true)
+
+// --- etiqueta del movimiento en el historial del pozo ---
+const mov = (over: Partial<MovementJackpot> = {}): MovementJackpot => ({
+  folio: "J-VPRMSV",
+  status: "in_review",
+  paidAt: null,
+  contactedAt: null,
+  ...over,
+})
+
+// Pagado: cerrado, con su folio a la vista.
+assert.deepEqual(
+  jackpotMovementView(mov({ status: "paid", paidAt: "2026-08-26T01:12:03Z" })),
+  { label: "Pagado", tone: "paid", folio: "J-VPRMSV" }
+)
+
+// Los dos pendientes se rotulan igual: lo que importa es que se adeuda.
+for (const s of ["pending_contact", "in_review"] as const) {
+  assert.deepEqual(jackpotMovementView(mov({ status: s })), {
+    label: "Pozo ganado · pendiente de pago",
+    tone: "pending",
+    folio: "J-VPRMSV",
+  })
+}
+
+// Histórico sin comprobante: no rompe y no promete un folio que no existe.
+assert.deepEqual(jackpotMovementView(null), {
+  label: "Pozo ganado",
+  tone: "legacy",
+  folio: null,
+})
+
+// Un pendiente NUNCA puede verse como pagado: es el bug que se está arreglando.
+const pendiente = jackpotMovementView(mov({ status: "in_review" }))
+assert.notEqual(pendiente.tone, "paid")
+assert.doesNotMatch(pendiente.label, /^Pagado$/)
+// Y el histórico tampoco: se acreditó, pero no por este circuito.
+assert.notEqual(jackpotMovementView(null).tone, "paid")
+
+// Los tres tonos son distintos entre sí (requisito visual).
+const tonos = [
+  jackpotMovementView(mov({ status: "paid" })).tone,
+  jackpotMovementView(mov({ status: "in_review" })).tone,
+  jackpotMovementView(null).tone,
+]
+assert.equal(new Set(tonos).size, 3)
 
 console.log("ok")
