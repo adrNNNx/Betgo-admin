@@ -6,6 +6,7 @@ import {
   ArrowLeftRight,
   Trophy,
   GalleryHorizontalEnd,
+  RotateCcw,
   type LucideIcon,
 } from "lucide-react"
 
@@ -45,6 +46,12 @@ export const navigation: NavGroup[] = [
       { title: "Banners", url: "/banners", icon: GalleryHorizontalEnd },
       { title: "Transacciones", url: "/transacciones", icon: ArrowLeftRight },
       { title: "Pozo", url: "/pozo", icon: Trophy, badge: "jackpots" },
+      {
+        title: "Jugadas gratis",
+        url: "/jugadas-gratis",
+        icon: RotateCcw,
+        roles: ["admin"],
+      },
     ],
   },
 ]
